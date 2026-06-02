@@ -243,7 +243,8 @@ final class ContainerFactory
         $container->register(FireRiskController::class, FireRiskController::class)
             ->setPublic(true)
             ->addArgument(new Reference('twig'))
-            ->addArgument(new Reference(FireRiskRepository::class));
+            ->addArgument(new Reference(FireRiskRepository::class))
+            ->addArgument(new Reference(TranslatorInterface::class));
 
         $container->register(ClimateController::class, ClimateController::class)
             ->setPublic(true)

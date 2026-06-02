@@ -9,6 +9,7 @@ use App\Service\Forecast\Meteorology\FireRiskLevel;
 use App\Service\Forecast\Meteorology\FireRiskRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tlab\IpmaApi\Enums\ForecastFireRiskDayEnum;
 use Tlab\IpmaApi\Exception\IpmaApiException;
 use Twig\Environment;
@@ -24,6 +25,7 @@ final class FireRiskController
     public function __construct(
         private readonly Environment $twig,
         private readonly FireRiskRepository $fireRisk,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -58,7 +60,7 @@ final class FireRiskController
                     'lat' => $record->latitude,
                     'lng' => $record->longitude,
                     'level' => $level,
-                    'level_label' => FireRiskLevel::label($level),
+                    'level_label' => $this->translator->trans(FireRiskLevel::label($level)),
                     'color' => FireRiskLevel::color($level),
                 ];
             }

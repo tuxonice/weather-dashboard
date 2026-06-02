@@ -98,6 +98,8 @@
         var raw = document.getElementById('stations-data').textContent;
         var stations = JSON.parse(raw);
         var i18n = JSON.parse(document.getElementById('station-i18n').textContent);
+        // Locale-aware detail URL: generated with a sentinel id and substituted per station.
+        var detailUrlTemplate = {{ path('stations_show', { id: 999999999 })|json_encode|raw }};
 
         var map = L.map('station-map', {
             center: [39.5, -8.0],
@@ -178,7 +180,7 @@
                 +   '<dt>' + escapeHtml(i18n.wind)        + '</dt><dd>' + fmt(s.wind_speed_kmh, 'km/h', 1)
                 +     (s.wind_dir_code ? ' ' + escapeHtml(s.wind_dir_code) : '') + '</dd>'
                 + '</dl>'
-                + '<a href="/stations/' + encodeURIComponent(s.id) + '">' + escapeHtml(i18n.open) + ' →</a>';
+                + '<a href="' + detailUrlTemplate.replace('999999999', encodeURIComponent(s.id)) + '">' + escapeHtml(i18n.open) + ' →</a>';
 
             marker.bindPopup(popup);
             marker.addTo(map);
