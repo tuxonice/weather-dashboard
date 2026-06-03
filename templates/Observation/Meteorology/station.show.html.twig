@@ -178,5 +178,114 @@
                 </div>
             {% endif %}
         </section>
+
+        {% if wind_rose %}
+            <section class="mt-4" aria-labelledby="wind-rose-heading">
+                <h2 id="wind-rose-heading" class="h5 mb-1">
+                    <i class="bi bi-compass me-2 text-primary" aria-hidden="true"></i>{{ 'station.wind_rose_heading'|trans }}
+                </h2>
+                <p class="text-body-secondary small mb-3">{{ 'station.wind_rose_subtitle'|trans }}</p>
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="mx-auto" style="max-width: 22rem;">
+                            <canvas id="wind-rose"
+                                    role="img"
+                                    aria-label="{{ 'station.wind_rose_aria'|trans }}"></canvas>
+                        </div>
+                        {% if wind_rose_calm > 0 %}
+                            <p class="text-body-secondary small text-center mt-3 mb-0">
+                                <i class="bi bi-wind me-1" aria-hidden="true"></i>{{ 'station.wind_rose_calm'|trans({ '%count%': wind_rose_calm }) }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
     {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+{% if wind_rose %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+        integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
+        crossorigin="anonymous"></script>
+<script id="wind-rose-data" type="application/json">{{ {
+    labels: wind_rose.sectors|map(s => s.code),
+    counts: wind_rose.sectors|map(s => s.count),
+}|json_encode|raw }}</script>
+<script>
+    (function () {
+        var data = JSON.parse(document.getElementById('wind-rose-data').textContent);
+
+        // Paints the compass codes (N, NE, …) around the rim at their true
+        // bearings. Labels are ordered N→NW, i.e. 0°, 45°, … 315° clockwise
+        // from the top — matching the chart's -22.5° start angle.
+        var compassLabels = {
+            id: 'compassLabels',
+            afterDraw: function (chart) {
+                var scale = chart.scales.r;
+                if (!scale) {
+                    return;
+                }
+                var ctx = chart.ctx;
+                var radius = scale.drawingArea + 16;
+                ctx.save();
+                ctx.font = '600 13px system-ui, sans-serif';
+                ctx.fillStyle = '#6c757d';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                chart.data.labels.forEach(function (label, i) {
+                    var bearing = (Math.PI / 180) * (i * 45);
+                    var x = scale.xCenter + radius * Math.sin(bearing);
+                    var y = scale.yCenter - radius * Math.cos(bearing);
+                    ctx.fillText(label, x, y);
+                });
+                ctx.restore();
+            },
+        };
+
+        new Chart(document.getElementById('wind-rose'), {
+            type: 'polarArea',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.counts,
+                    // Single-hue blue palette (Bootstrap primary).
+                    backgroundColor: 'rgba(13, 110, 253, 0.55)',
+                    borderColor: 'rgba(13, 110, 253, 0.9)',
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                responsive: true,
+                // Leave room around the rim for the compass labels.
+                layout: { padding: 24 },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        // Chart.js v4 polar-area rotation lives on the radial
+                        // scale (the chart-level `startAngle` option is ignored
+                        // for polar charts). The default of 0 already centres
+                        // the first sector (N) at the top, with each 45° sector
+                        // centred on its compass point — exactly what we want.
+                        startAngle: -22.5,
+                        ticks: { precision: 0, backdropColor: 'transparent' },
+                    },
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.label + ': ' + ctx.raw + ' h';
+                            },
+                        },
+                    },
+                },
+            },
+            plugins: [compassLabels],
+        });
+    })();
+</script>
+{% endif %}
 {% endblock %}

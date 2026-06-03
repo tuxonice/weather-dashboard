@@ -8,6 +8,7 @@ use App\Service\Observation\Meteorology\StationHourlyRepository;
 use App\Service\Observation\Meteorology\StationObservationRepository;
 use App\Service\Observation\Meteorology\StationRepository;
 use App\Service\Observation\Meteorology\StationWindDirection;
+use App\Service\Observation\Meteorology\WindRose;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tlab\IpmaApi\Exception\IpmaApiException;
@@ -97,10 +98,12 @@ final class StationController
         $history = [];
         $latest = null;
         $observationError = null;
+        $directionIds = [];
 
         try {
             foreach ($this->observations->historyForStation($id) as $entry) {
                 $obs = $entry['observation'];
+                $directionIds[] = $obs->windDirectionId;
                 $row = [
                     'at' => $entry['at'],
                     'temperature_c' => $obs->temperatureC,
@@ -129,6 +132,11 @@ final class StationController
         $history = array_map($convertAt, $history);
         $latest = $latest !== null ? $convertAt($latest) : null;
 
+        // Aggregate the 24h direction readings into an 8-sector wind rose.
+        // Suppress the chart entirely when no directional wind was recorded.
+        $windRose = WindRose::tally($directionIds);
+        $hasDirectionalWind = array_sum(array_column($windRose['sectors'], 'count')) > 0;
+
         $html = $this->twig->render('Observation/Meteorology/station.show.html.twig', [
             'station' => $station,
             'history' => $history,
@@ -136,6 +144,8 @@ final class StationController
             'timezone' => $tz->getName(),
             'error' => null,
             'observation_error' => $observationError,
+            'wind_rose' => $hasDirectionalWind ? $windRose : null,
+            'wind_rose_calm' => $windRose['calm'],
         ]);
 
         return new Response($html);
