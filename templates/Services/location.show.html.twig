@@ -285,6 +285,70 @@
                     </div>
                 </div>
             {% endif %}
+
+            {# ── Planets card ──────────────────────────────────────────────── #}
+            {% if planets is not empty %}
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h2 class="h6 mb-0">
+                                <i class="bi bi-globe text-info me-2" aria-hidden="true"></i>{{ 'location.planet_section'|trans }}
+                            </h2>
+                        </div>
+                        <div class="card-body p-0">
+                            {# Visible now highlight #}
+                            {% if visible_planets is not empty %}
+                                <div class="px-3 py-2 bg-success-subtle border-bottom">
+                                    <span class="small fw-semibold">{{ 'location.planet_visible_now'|trans }}:</span>
+                                    <span class="small">
+                                        {% for planet in visible_planets %}
+                                            <span class="me-2"><span aria-hidden="true">{{ planet.emoji }}</span> {{ planet.translation_key|trans }}</span>
+                                        {% endfor %}
+                                    </span>
+                                </div>
+                            {% endif %}
+
+                            {# Planet table #}
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3">{{ 'location.planet_name'|trans }}</th>
+                                            <th>{{ 'location.planet_ra'|trans }}</th>
+                                            <th>{{ 'location.planet_dec'|trans }}</th>
+                                            <th>{{ 'location.azimuth'|trans }}</th>
+                                            <th>{{ 'location.altitude'|trans }}</th>
+                                            <th>{{ 'location.planet_distance'|trans }}</th>
+                                            <th>{{ 'location.planet_magnitude'|trans }}</th>
+                                            <th>{{ 'location.planet_elongation'|trans }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for planet in planets %}
+                                            <tr class="{{ planet.is_visible ? 'table-success' : '' }}">
+                                                <td class="ps-3">
+                                                    <span aria-hidden="true">{{ planet.emoji }}</span>
+                                                    {{ planet.translation_key|trans }}
+                                                    {% if planet.is_visible %}
+                                                        <span class="badge bg-success ms-1">{{ 'location.planet_visible'|trans }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="font-monospace small">{{ planet.ra_hms }}</td>
+                                                <td class="font-monospace small">{{ planet.dec_dms }}</td>
+                                                <td>{{ planet.azimuth }}°</td>
+                                                <td>{{ planet.altitude }}°</td>
+                                                <td class="small">{{ planet.distance_au }} AU (<span class="text-body-secondary">{{ (planet.distance_km / 1000000)|number_format(0) }}M km</span>)</td>
+                                                <td>{{ planet.magnitude }}</td>
+                                                <td>{{ planet.elongation }}°</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 {% endblock %}

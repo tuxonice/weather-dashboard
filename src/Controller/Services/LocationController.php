@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Services;
 
 use App\Service\Astronomy\MoonPhase;
+use App\Service\Astronomy\PlanetPosition;
 use App\Service\Forecast\Warnings\AwarenessLevel;
 use App\Service\Forecast\Warnings\WarningRepository;
 use App\Service\ForecastRepository;
@@ -97,6 +98,8 @@ final class LocationController
                 'moonrise' => null,
                 'moonset' => null,
                 'upcoming_moon_phases' => [],
+                'planets' => [],
+                'visible_planets' => [],
             ]);
 
             return new Response($html, Response::HTTP_BAD_GATEWAY);
@@ -207,6 +210,11 @@ final class LocationController
             MoonPhase::nextPrincipalPhases($nowUtc, 4),
         );
 
+        // Calculate planet positions
+        $planetPositions = PlanetPosition::getAllPlanetPositions($nowUtc, $location->latitude, $location->longitude);
+        $visiblePlanets = array_filter($planetPositions, static fn(array $p): bool => $p['is_visible']);
+        usort($visiblePlanets, static fn(array $a, array $b): int => $a['magnitude'] <=> $b['magnitude']);
+
         $html = $this->twig->render('Services/location.show.html.twig', [
             'location' => $location,
             'region_label' => LocationRepository::regionLabel($location->idRegion),
@@ -240,6 +248,8 @@ final class LocationController
             'moonrise' => $moonrise,
             'moonset' => $moonset,
             'upcoming_moon_phases' => $upcomingMoonPhases,
+            'planets' => $planetPositions,
+            'visible_planets' => $visiblePlanets,
         ]);
 
         return new Response($html);
