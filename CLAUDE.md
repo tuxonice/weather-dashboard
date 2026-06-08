@@ -39,8 +39,8 @@ Controllers are registered as **public** services so `ContainerControllerResolve
 
 1. Nginx forwards everything to `public/index.php` via PHP-FPM (see `docker/nginx.conf`).
 2. `Kernel::handle()` dispatches through `HttpKernel`.
-3. `LocaleSubscriber` (priority 64, runs before `RouterListener`) resolves the locale from `?lang=` → `lang` cookie → default `pt`, then sets it on the request, the translator, and as Twig globals (`app_locale`, `app_supported_locales`). When `?lang=` is supplied explicitly, the response gets a 1-year `lang` cookie.
-4. `RouterListener` matches against `RouteLoader`'s collection.
+3. `RouterListener` (priority 32) matches against `RouteLoader`'s collection, populating the `_locale` route attribute (every page route is registered per-locale, e.g. `home.pt` / `home.en`).
+4. `LocaleSubscriber` (priority 16, runs *after* `RouterListener`) reads the locale from that `_locale` attribute, falling back to the default `pt` for the prefix-less root `/`. It sets the locale on the request, the translator, the routing `RequestContext` (so `path()` emits locale-prefixed URLs), and as Twig globals (`app_locale`, `app_supported_locales`, `app_current_route`, `app_route_params`). There is no cookie or `?lang=` handling — locale lives entirely in the URL prefix. The bare `/` is a 302 redirect to `/pt` via `HomeController::redirect`.
 5. `ContainerControllerResolver` fetches the controller service; the action runs.
 6. `ExceptionSubscriber` (priority -8) catches everything not handled upstream:
    - `HttpExceptionInterface` → `templates/error/{status}.html.twig` (falls back to `error.html.twig`).
@@ -72,7 +72,7 @@ These helpers classify IPMA codes into Bootstrap colour/icon metadata.
 
 - Per-page templates live in `templates/<feature>/`, all extend `templates/base.html.twig`.
 - Translation catalogues are YAML in `translations/messages.{pt,en}.yaml`. Default locale is `pt`, fallback `en`. `TranslatorFactory` auto-discovers any `messages.<locale>.yaml` (and other domains following `<domain>.<locale>.yaml`).
-- The language switcher in `base.html.twig` posts the `?lang=` query parameter; `LocaleSubscriber` does the rest.
+- The language switcher in `base.html.twig` is a dropdown of plain links to the *same* logical route in the other locale (it strips the `.pt`/`.en` suffix from `app_current_route`, re-appends the target locale, and reuses `app_route_params` minus `_locale`). Matching `<link rel="alternate" hreflang>` tags are emitted in `<head>` the same way. Switching language just navigates to the locale-prefixed URL.
 
 ### Tests
 
