@@ -32,19 +32,26 @@ final class WindRose
     ];
 
     /**
-     * @param array<int, ?int> $directionIds raw `idDireccVento` values
+     * @param array<int, ?int>   $directionIds raw `idDireccVento` values
+     * @param array<int, ?float> $speeds       wind speeds parallel to
+     *                                          `$directionIds` by index (any
+     *                                          unit; the average is returned in
+     *                                          whatever unit is passed in).
+     *                                          Pass `[]` to skip speed tallying.
      *
      * @return array{
-     *     sectors: list<array{code: string, label: string, count: int}>,
+     *     sectors: list<array{code: string, label: string, count: int, avg_speed: ?float}>,
      *     calm: int
      * }
      */
-    public static function tally(array $directionIds): array
+    public static function tally(array $directionIds, array $speeds = []): array
     {
         $counts = array_fill(1, 8, 0);
+        $speedSums = array_fill(1, 8, 0.0);
+        $speedCounts = array_fill(1, 8, 0);
         $calm = 0;
 
-        foreach ($directionIds as $id) {
+        foreach ($directionIds as $i => $id) {
             if ($id === 0) {
                 $calm++;
                 continue;
@@ -54,12 +61,25 @@ final class WindRose
             }
             if ($id !== null && $id >= 1 && $id <= 8) {
                 $counts[$id]++;
+
+                $speed = $speeds[$i] ?? null;
+                if ($speed !== null) {
+                    $speedSums[$id] += $speed;
+                    $speedCounts[$id]++;
+                }
             }
         }
 
         $sectors = [];
         foreach (self::SECTORS as [$id, $code, $label]) {
-            $sectors[] = ['code' => $code, 'label' => $label, 'count' => $counts[$id]];
+            $sectors[] = [
+                'code' => $code,
+                'label' => $label,
+                'count' => $counts[$id],
+                'avg_speed' => $speedCounts[$id] > 0
+                    ? $speedSums[$id] / $speedCounts[$id]
+                    : null,
+            ];
         }
 
         return ['sectors' => $sectors, 'calm' => $calm];

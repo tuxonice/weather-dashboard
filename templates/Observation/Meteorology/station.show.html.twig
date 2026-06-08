@@ -179,18 +179,47 @@
             {% endif %}
         </section>
 
+        {% for chart in trend_charts %}
+            <section class="mt-4" aria-labelledby="trend-{{ chart.id }}-heading">
+                <h2 id="trend-{{ chart.id }}-heading" class="h5 mb-1">
+                    <i class="bi {{ chart.icon }} me-2 text-primary" aria-hidden="true"></i>{{ chart.heading|trans }}
+                </h2>
+                <p class="text-body-secondary small mb-3">{{ 'station.trend_subtitle'|trans }}</p>
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div style="position: relative; height: 18rem;">
+                            <canvas id="trend-{{ chart.id }}"
+                                    role="img"
+                                    aria-label="{{ chart.heading|trans }}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        {% endfor %}
+
         {% if wind_rose %}
             <section class="mt-4" aria-labelledby="wind-rose-heading">
                 <h2 id="wind-rose-heading" class="h5 mb-1">
                     <i class="bi bi-compass me-2 text-primary" aria-hidden="true"></i>{{ 'station.wind_rose_heading'|trans }}
                 </h2>
-                <p class="text-body-secondary small mb-3">{{ 'station.wind_rose_subtitle'|trans }}</p>
+                <p class="text-body-secondary small mb-3">{{ 'station.wind_rose_subtitle_speed'|trans }}</p>
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div class="mx-auto" style="max-width: 22rem;">
                             <canvas id="wind-rose"
                                     role="img"
                                     aria-label="{{ 'station.wind_rose_aria'|trans }}"></canvas>
+                        </div>
+                        {# Colour scale: sector fill encodes average wind speed.
+                           Endpoints match SPEED_MAX (40 km/h) and the blue→red
+                           HSL ramp in the chart script below. #}
+                        <div class="mx-auto mt-3" style="max-width: 18rem;">
+                            <div class="rounded" style="height: 0.6rem; background: linear-gradient(to right, hsl(240,70%,50%), hsl(180,70%,50%), hsl(120,70%,50%), hsl(60,70%,50%), hsl(0,70%,50%));"></div>
+                            <div class="d-flex justify-content-between text-body-secondary small mt-1">
+                                <span>0</span>
+                                <span>{{ 'station.wind_rose_speed_legend'|trans }}</span>
+                                <span>≥ 40 km/h</span>
+                            </div>
                         </div>
                         {% if wind_rose_calm > 0 %}
                             <p class="text-body-secondary small text-center mt-3 mb-0">
@@ -205,17 +234,38 @@
 {% endblock %}
 
 {% block javascripts %}
-{% if wind_rose %}
+{% if wind_rose or trend_charts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
         integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
         crossorigin="anonymous"></script>
+{% endif %}
+{% if wind_rose %}
 <script id="wind-rose-data" type="application/json">{{ {
     labels: wind_rose.sectors|map(s => s.code),
     counts: wind_rose.sectors|map(s => s.count),
+    avgSpeeds: wind_rose.sectors|map(s => s.avg_speed),
+    i18n: {
+        hours: 'station.wind_rose_hours_label'|trans,
+        avgSpeed: 'station.wind_rose_avg_speed'|trans,
+        noSpeed: 'station.wind_rose_no_speed'|trans,
+    },
 }|json_encode|raw }}</script>
 <script>
     (function () {
         var data = JSON.parse(document.getElementById('wind-rose-data').textContent);
+
+        // Top of the colour scale, in km/h. Average hourly speeds rarely
+        // exceed this, and a fixed domain keeps colours comparable between
+        // stations. Speed maps to a hue ramp: blue (calm) → red (strong).
+        var SPEED_MAX = 40;
+        function speedColor(speed, alpha) {
+            if (speed === null || speed === undefined) {
+                return 'rgba(173, 181, 189, ' + alpha + ')'; // grey: no speed data
+            }
+            var t = Math.max(0, Math.min(1, speed / SPEED_MAX));
+            var hue = 240 - 240 * t; // 240° blue → 0° red
+            return 'hsla(' + hue + ', 70%, 50%, ' + alpha + ')';
+        }
 
         // Paints the compass codes (N, NE, …) around the rim at their true
         // bearings. Labels are ordered N→NW, i.e. 0°, 45°, … 315° clockwise
@@ -250,9 +300,10 @@
                 labels: data.labels,
                 datasets: [{
                     data: data.counts,
-                    // Single-hue blue palette (Bootstrap primary).
-                    backgroundColor: 'rgba(13, 110, 253, 0.55)',
-                    borderColor: 'rgba(13, 110, 253, 0.9)',
+                    // Radius = hours from each direction; fill colour = the
+                    // average wind speed recorded from that direction.
+                    backgroundColor: data.avgSpeeds.map(function (s) { return speedColor(s, 0.6); }),
+                    borderColor: data.avgSpeeds.map(function (s) { return speedColor(s, 0.95); }),
                     borderWidth: 1,
                 }],
             },
@@ -277,13 +328,146 @@
                     tooltip: {
                         callbacks: {
                             label: function (ctx) {
-                                return ctx.label + ': ' + ctx.raw + ' h';
+                                return ctx.label + ': ' + ctx.raw + ' ' + data.i18n.hours;
+                            },
+                            afterLabel: function (ctx) {
+                                var speed = data.avgSpeeds[ctx.dataIndex];
+                                if (speed === null || speed === undefined) {
+                                    return data.i18n.avgSpeed + ': ' + data.i18n.noSpeed;
+                                }
+                                return data.i18n.avgSpeed + ': ' + speed.toFixed(1) + ' km/h';
                             },
                         },
                     },
                 },
             },
             plugins: [compassLabels],
+        });
+    })();
+</script>
+{% endif %}
+{% if trend_charts %}
+<script id="trend-data" type="application/json">{{ {
+    labels: trend_labels|map(d => d|date('H:i', timezone)),
+    dirLabel: 'station.wind_dir_tooltip'|trans,
+    charts: trend_charts|map(c => {
+        id: c.id,
+        unit: c.unit,
+        color: c.color,
+        decimals: c.decimals,
+        zero: c.zero,
+        values: c.values,
+        bearings: c.bearings|default(null),
+        dirCodes: c.dir_codes|default(null),
+    }),
+}|json_encode|raw }}</script>
+<script>
+    (function () {
+        var data = JSON.parse(document.getElementById('trend-data').textContent);
+
+        // Draws an upward-pointing arrow (north / 0°) onto a small canvas, used
+        // as a Chart.js point style. pointRotation then turns it to the wind
+        // direction. Returns a canvas so it renders synchronously (no onload).
+        function makeArrow(color) {
+            var size = 20, cx = size / 2;
+            var canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            var ctx = canvas.getContext('2d');
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();          // shaft
+            ctx.moveTo(cx, size - 4);
+            ctx.lineTo(cx, 7);
+            ctx.stroke();
+            ctx.beginPath();          // head
+            ctx.moveTo(cx, 2);
+            ctx.lineTo(cx - 4, 9);
+            ctx.lineTo(cx + 4, 9);
+            ctx.closePath();
+            ctx.fill();
+            return canvas;
+        }
+
+        data.charts.forEach(function (c) {
+            var el = document.getElementById('trend-' + c.id);
+            if (!el) {
+                return;
+            }
+
+            var dataset = {
+                data: c.values,
+                borderColor: 'rgba(' + c.color + ', 0.9)',
+                backgroundColor: 'rgba(' + c.color + ', 0.12)',
+                borderWidth: 2,
+                fill: true,
+                // Spline smoothing.
+                tension: 0.4,
+                // Bridge the occasional missing hourly reading.
+                spanGaps: true,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+            };
+
+            // Wind speed: render each point as a direction arrow. Calm/unknown
+            // hours (null bearing) keep a plain dot.
+            if (c.bearings) {
+                var arrow = makeArrow('rgba(' + c.color + ', 0.95)');
+                dataset.pointStyle = c.bearings.map(function (b) {
+                    return b === null ? 'circle' : arrow;
+                });
+                // Arrow points north at 0°; rotate to the downwind bearing
+                // (from-bearing + 180) so it shows where the wind is heading.
+                dataset.pointRotation = c.bearings.map(function (b) {
+                    return b === null ? 0 : (b + 180) % 360;
+                });
+                dataset.pointRadius = c.bearings.map(function (b) {
+                    return b === null ? 2 : 9;
+                });
+                dataset.pointHoverRadius = c.bearings.map(function (b) {
+                    return b === null ? 4 : 11;
+                });
+            }
+
+            new Chart(el, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [dataset],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            beginAtZero: c.zero,
+                            title: { display: true, text: c.unit },
+                        },
+                        x: {
+                            ticks: { maxRotation: 0, autoSkipPadding: 12 },
+                        },
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    return ctx.parsed.y.toFixed(c.decimals) + ' ' + c.unit;
+                                },
+                                afterLabel: function (ctx) {
+                                    if (!c.dirCodes) {
+                                        return undefined;
+                                    }
+                                    var code = c.dirCodes[ctx.dataIndex];
+                                    return code ? data.dirLabel + ': ' + code : undefined;
+                                },
+                            },
+                        },
+                    },
+                },
+            });
         });
     })();
 </script>
