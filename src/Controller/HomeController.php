@@ -7,7 +7,6 @@ namespace App\Controller;
 use App\Framework\LocaleSubscriber;
 use App\Service\Observation\Meteorology\StationExtremesService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
 
@@ -45,10 +44,8 @@ final class HomeController
         return new Response($html);
     }
 
-    public function redirect(Request $request): RedirectResponse
+    public function redirect(): RedirectResponse
     {
-        $locale = LocaleSubscriber::fromCookie($request->cookies->get(LocaleSubscriber::COOKIE_NAME));
-
-        return new RedirectResponse('/' . $locale, 302);
+        return new RedirectResponse('/' . LocaleSubscriber::DEFAULT, 302);
     }
 }

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Framework;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
@@ -27,18 +25,14 @@ use Twig\Environment;
  *    emit the correct locale-prefixed URL without needing an explicit
  *    _locale parameter in every call.
  *
- * The preferred locale is also persisted in a cookie so that the root-
- * redirect controller (/ → /pt or /en) can honour the user's last choice.
+ * The prefix-less root request (/) has no _locale, so it falls back to
+ * the default locale before the root-redirect controller sends it on.
  */
 final class LocaleSubscriber implements EventSubscriberInterface
 {
-    public const COOKIE_NAME = 'lang';
-
     /** @var list<string> */
     public const SUPPORTED = ['pt', 'en'];
     public const DEFAULT = 'pt';
-
-    private ?string $persistLocale = null;
 
     public function __construct(
         private readonly LocaleAwareInterface $translator,
@@ -53,7 +47,6 @@ final class LocaleSubscriber implements EventSubscriberInterface
         return [
             // After RouterListener (priority 32) so _locale is already set.
             KernelEvents::REQUEST => ['onKernelRequest', 16],
-            KernelEvents::RESPONSE => ['onKernelResponse', 0],
         ];
     }
 
@@ -65,11 +58,12 @@ final class LocaleSubscriber implements EventSubscriberInterface
 
         $request = $event->getRequest();
 
-        // Prefer the locale baked into the matched route; fall back to cookie.
+        // Prefer the locale baked into the matched route; fall back to default
+        // for the prefix-less root request.
         $routeLocale = $request->attributes->get('_locale');
         $locale = is_string($routeLocale) && in_array($routeLocale, self::SUPPORTED, true)
             ? $routeLocale
-            : self::fromCookie($request->cookies->get(self::COOKIE_NAME));
+            : self::DEFAULT;
 
         $request->setLocale($locale);
         $this->translator->setLocale($locale);
@@ -89,44 +83,5 @@ final class LocaleSubscriber implements EventSubscriberInterface
         $routeParams = $request->attributes->get('_route_params', []);
         $this->twig->addGlobal('app_current_route', $routeName);
         $this->twig->addGlobal('app_route_params', $routeParams);
-
-        // Persist locale in cookie whenever it comes from a locale-prefixed URL.
-        if (is_string($routeLocale) && in_array($routeLocale, self::SUPPORTED, true)) {
-            $this->persistLocale = $routeLocale;
-        }
-    }
-
-    public function onKernelResponse(ResponseEvent $event): void
-    {
-        if ($this->persistLocale === null || !$event->isMainRequest()) {
-            return;
-        }
-
-        $event->getResponse()->headers->setCookie(
-            Cookie::create(self::COOKIE_NAME)
-                ->withValue($this->persistLocale)
-                ->withExpires(strtotime('+1 year') ?: null)
-                ->withPath('/')
-                ->withSecure($event->getRequest()->isSecure())
-                ->withHttpOnly(false)
-                ->withSameSite(Cookie::SAMESITE_LAX),
-        );
-
-        $this->persistLocale = null;
-    }
-
-    /**
-     * Resolve locale from cookie value, falling back to default.
-     */
-    public static function fromCookie(mixed $cookieValue): string
-    {
-        if (is_string($cookieValue)) {
-            $normalized = strtolower(trim($cookieValue));
-            if (in_array($normalized, self::SUPPORTED, true)) {
-                return $normalized;
-            }
-        }
-
-        return self::DEFAULT;
     }
 }
