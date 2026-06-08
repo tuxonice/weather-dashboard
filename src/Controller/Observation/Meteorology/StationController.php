@@ -99,11 +99,13 @@ final class StationController
         $latest = null;
         $observationError = null;
         $directionIds = [];
+        $windSpeeds = [];
 
         try {
             foreach ($this->observations->historyForStation($id) as $entry) {
                 $obs = $entry['observation'];
                 $directionIds[] = $obs->windDirectionId;
+                $windSpeeds[] = $obs->windSpeedKmh;
                 $row = [
                     'at' => $entry['at'],
                     'temperature_c' => $obs->temperatureC,
@@ -115,6 +117,7 @@ final class StationController
                     'wind_speed_ms' => $obs->windSpeedMs,
                     'wind_dir_code' => StationWindDirection::code($obs->windDirectionId),
                     'wind_dir_label' => StationWindDirection::label($obs->windDirectionId),
+                    'wind_dir_bearing' => StationWindDirection::bearing($obs->windDirectionId),
                 ];
                 $history[] = $row;
                 $latest = $row;
@@ -132,10 +135,52 @@ final class StationController
         $history = array_map($convertAt, $history);
         $latest = $latest !== null ? $convertAt($latest) : null;
 
-        // Aggregate the 24h direction readings into an 8-sector wind rose.
+        // Aggregate the 24h direction readings into an 8-sector wind rose,
+        // averaging wind speed per sector for the colour scale.
         // Suppress the chart entirely when no directional wind was recorded.
-        $windRose = WindRose::tally($directionIds);
+        $windRose = WindRose::tally($directionIds, $windSpeeds);
         $hasDirectionalWind = array_sum(array_column($windRose['sectors'], 'count')) > 0;
+
+        // Chronological (oldest→newest) per-metric series for the 24h trend
+        // charts. Each metric is dropped when it has no readings at all; the
+        // values array keeps nulls so gaps line up with the shared time axis.
+        $chronological = array_reverse($history);
+        $trendLabels = array_column($chronological, 'at');
+
+        $metricDefs = [
+            ['id' => 'temperature', 'field' => 'temperature_c',  'heading' => 'station.temp_trend_heading',       'icon' => 'bi-thermometer-half', 'unit' => '°C',   'color' => '220, 53, 69',   'decimals' => 1, 'zero' => false],
+            ['id' => 'humidity',    'field' => 'humidity_pct',   'heading' => 'station.humidity_trend_heading',   'icon' => 'bi-droplet-half',     'unit' => '%',    'color' => '13, 202, 240',  'decimals' => 0, 'zero' => false],
+            ['id' => 'pressure',    'field' => 'pressure_hpa',   'heading' => 'station.pressure_trend_heading',   'icon' => 'bi-speedometer',      'unit' => 'hPa',  'color' => '108, 117, 125', 'decimals' => 1, 'zero' => false],
+            ['id' => 'wind_speed',  'field' => 'wind_speed_kmh', 'heading' => 'station.wind_speed_heading',       'icon' => 'bi-wind',             'unit' => 'km/h', 'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true],
+        ];
+
+        $trendCharts = [];
+        foreach ($metricDefs as $def) {
+            $values = array_column($chronological, $def['field']);
+            if (array_filter($values, static fn($v): bool => $v !== null) === []) {
+                continue;
+            }
+            $chart = [
+                'id'       => $def['id'],
+                'heading'  => $def['heading'],
+                'icon'     => $def['icon'],
+                'unit'     => $def['unit'],
+                'color'    => $def['color'],
+                'decimals' => $def['decimals'],
+                'zero'     => $def['zero'],
+                'values'   => $values,
+            ];
+
+            // The wind-speed chart draws each point as an arrow rotated to the
+            // wind direction (bearing it blows *from*); calm/unknown hours have
+            // a null bearing and fall back to a plain dot.
+            if ($def['id'] === 'wind_speed') {
+                $chart['bearings'] = array_column($chronological, 'wind_dir_bearing');
+                $chart['dir_codes'] = array_column($chronological, 'wind_dir_code');
+            }
+
+            $trendCharts[] = $chart;
+        }
 
         $html = $this->twig->render('Observation/Meteorology/station.show.html.twig', [
             'station' => $station,
@@ -146,6 +191,8 @@ final class StationController
             'observation_error' => $observationError,
             'wind_rose' => $hasDirectionalWind ? $windRose : null,
             'wind_rose_calm' => $windRose['calm'],
+            'trend_labels' => $trendLabels,
+            'trend_charts' => $trendCharts,
         ]);
 
         return new Response($html);

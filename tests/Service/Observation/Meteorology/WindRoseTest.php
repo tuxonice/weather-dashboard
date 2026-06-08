@@ -61,6 +61,51 @@ final class WindRoseTest extends TestCase
         self::assertSame(1, $total);
     }
 
+    public function testSectorsCarryNullAvgSpeedWhenNoSpeedsGiven(): void
+    {
+        $result = WindRose::tally([1, 3]);
+
+        foreach ($result['sectors'] as $sector) {
+            self::assertNull($sector['avg_speed']);
+        }
+    }
+
+    public function testAverageSpeedIsComputedPerSector(): void
+    {
+        // Two N readings (10, 20 → avg 15), one E reading (30).
+        $ids = [1, 1, 3];
+        $speeds = [10.0, 20.0, 30.0];
+
+        $result = WindRose::tally($ids, $speeds);
+
+        $byCode = [];
+        foreach ($result['sectors'] as $sector) {
+            $byCode[$sector['code']] = $sector;
+        }
+
+        self::assertSame(15.0, $byCode['N']['avg_speed']);
+        self::assertSame(30.0, $byCode['E']['avg_speed']);
+        self::assertNull($byCode['S']['avg_speed']);
+    }
+
+    public function testNullSpeedsAreExcludedFromTheAverage(): void
+    {
+        // N gets one null speed and one 20 km/h reading → avg 20, count 2.
+        $result = WindRose::tally([1, 1], [null, 20.0]);
+
+        self::assertSame(2, $result['sectors'][0]['count']);
+        self::assertSame(20.0, $result['sectors'][0]['avg_speed']);
+    }
+
+    public function testSpeedOfCalmReadingsIsIgnored(): void
+    {
+        // Calm (id 0) carries a speed but must not feed any sector average.
+        $result = WindRose::tally([0, 1], [5.0, 12.0]);
+
+        self::assertSame(1, $result['calm']);
+        self::assertSame(12.0, $result['sectors'][0]['avg_speed']);
+    }
+
     public function testMixedDistributionCountsEachDirection(): void
     {
         // 5×N, 3×E, 2×SW, 1×NW, 1 calm

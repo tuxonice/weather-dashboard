@@ -17,6 +17,31 @@ final class StationWindDirectionTest extends TestCase
         self::assertSame($expectedLabel, StationWindDirection::label($id));
     }
 
+    #[DataProvider('bearingCases')]
+    public function testBearing(?int $id, ?int $expectedBearing): void
+    {
+        self::assertSame($expectedBearing, StationWindDirection::bearing($id));
+    }
+
+    /**
+     * @return iterable<string, array{0:?int,1:?int}>
+     */
+    public static function bearingCases(): iterable
+    {
+        yield 'null id'     => [null, null];
+        yield 'calm (0)'    => [0,    null];
+        yield 'north (1)'   => [1,    0];
+        yield 'north-east'  => [2,    45];
+        yield 'east'        => [3,    90];
+        yield 'south-east'  => [4,    135];
+        yield 'south'       => [5,    180];
+        yield 'south-west'  => [6,    225];
+        yield 'west'        => [7,    270];
+        yield 'north-west'  => [8,    315];
+        yield 'north (9)'   => [9,    0];
+        yield 'unknown id'  => [42,   null];
+    }
+
     /**
      * @return iterable<string, array{0:?int,1:string,2:string}>
      */
