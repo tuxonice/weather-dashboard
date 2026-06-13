@@ -100,27 +100,41 @@ final class StationController
         $observationError = null;
         $directionIds = [];
         $windSpeeds = [];
+        $fullSeries = [];
 
         try {
-            foreach ($this->observations->historyForStation($id) as $entry) {
+            foreach ($this->observations->historyForStationFull($id) as $entry) {
                 $obs = $entry['observation'];
-                $directionIds[] = $obs->windDirectionId;
-                $windSpeeds[] = $obs->windSpeedKmh;
-                $row = [
+                if ($obs !== null) {
+                    $directionIds[] = $obs->windDirectionId;
+                    $windSpeeds[] = $obs->windSpeedKmh;
+                    $row = [
+                        'at' => $entry['at'],
+                        'temperature_c' => $obs->temperatureC,
+                        'humidity_pct' => $obs->humidityPct,
+                        'pressure_hpa' => $obs->pressureHpa,
+                        'precipitation_mm' => $obs->precipitationMm,
+                        'radiation_wm2' => $obs->radiationWm2,
+                        'wind_speed_kmh' => $obs->windSpeedKmh,
+                        'wind_speed_ms' => $obs->windSpeedMs,
+                        'wind_dir_code' => StationWindDirection::code($obs->windDirectionId),
+                        'wind_dir_label' => StationWindDirection::label($obs->windDirectionId),
+                        'wind_dir_bearing' => StationWindDirection::bearing($obs->windDirectionId),
+                    ];
+                    $history[] = $row;
+                    $latest = $row;
+                }
+                $fullSeries[] = [
                     'at' => $entry['at'],
-                    'temperature_c' => $obs->temperatureC,
-                    'humidity_pct' => $obs->humidityPct,
-                    'pressure_hpa' => $obs->pressureHpa,
-                    'precipitation_mm' => $obs->precipitationMm,
-                    'radiation_wm2' => $obs->radiationWm2,
-                    'wind_speed_kmh' => $obs->windSpeedKmh,
-                    'wind_speed_ms' => $obs->windSpeedMs,
-                    'wind_dir_code' => StationWindDirection::code($obs->windDirectionId),
-                    'wind_dir_label' => StationWindDirection::label($obs->windDirectionId),
-                    'wind_dir_bearing' => StationWindDirection::bearing($obs->windDirectionId),
+                    'temperature_c' => $obs?->temperatureC,
+                    'humidity_pct' => $obs?->humidityPct,
+                    'pressure_hpa' => $obs?->pressureHpa,
+                    'wind_speed_kmh' => $obs?->windSpeedKmh,
+                    'radiation_wm2' => $obs?->radiationWm2,
+                    'precipitation_mm' => $obs?->precipitationMm,
+                    'wind_dir_bearing' => $obs !== null ? StationWindDirection::bearing($obs->windDirectionId) : null,
+                    'wind_dir_code' => $obs !== null ? StationWindDirection::code($obs->windDirectionId) : null,
                 ];
-                $history[] = $row;
-                $latest = $row;
             }
         } catch (IpmaApiException $e) {
             $observationError = $e->getMessage();
@@ -142,41 +156,54 @@ final class StationController
         $hasDirectionalWind = array_sum(array_column($windRose['sectors'], 'count')) > 0;
 
         // Chronological (oldest→newest) per-metric series for the 24h trend
-        // charts. Each metric is dropped when it has no readings at all; the
-        // values array keeps nulls so gaps line up with the shared time axis.
-        $chronological = array_reverse($history);
-        $trendLabels = array_column($chronological, 'at');
+        // charts. Uses the full series (all 24 timestamps) so missing hours
+        // appear as explicit nulls and render as visible gaps in the chart.
+        $trendLabels = array_map(
+            static fn(array $row) => $row['at']->setTimezone($tz),
+            $fullSeries,
+        );
 
         $metricDefs = [
-            ['id' => 'temperature', 'field' => 'temperature_c',  'heading' => 'station.temp_trend_heading',       'icon' => 'bi-thermometer-half', 'unit' => '°C',   'color' => '220, 53, 69',   'decimals' => 1, 'zero' => false],
-            ['id' => 'humidity',    'field' => 'humidity_pct',   'heading' => 'station.humidity_trend_heading',   'icon' => 'bi-droplet-half',     'unit' => '%',    'color' => '13, 202, 240',  'decimals' => 0, 'zero' => false],
-            ['id' => 'pressure',    'field' => 'pressure_hpa',   'heading' => 'station.pressure_trend_heading',   'icon' => 'bi-speedometer',      'unit' => 'hPa',  'color' => '108, 117, 125', 'decimals' => 1, 'zero' => false],
-            ['id' => 'wind_speed',  'field' => 'wind_speed_kmh', 'heading' => 'station.wind_speed_heading',       'icon' => 'bi-wind',             'unit' => 'km/h', 'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true],
+            ['id' => 'temperature',   'field' => 'temperature_c',   'heading' => 'station.temp_trend_heading',         'icon' => 'bi-thermometer-half', 'unit' => '°C',   'color' => '220, 53, 69',   'decimals' => 1, 'zero' => false, 'chart_type' => 'line'],
+            ['id' => 'humidity',      'field' => 'humidity_pct',    'heading' => 'station.humidity_trend_heading',     'icon' => 'bi-droplet-half',     'unit' => '%',    'color' => '13, 202, 240',  'decimals' => 0, 'zero' => false, 'chart_type' => 'line'],
+            ['id' => 'pressure',      'field' => 'pressure_hpa',    'heading' => 'station.pressure_trend_heading',     'icon' => 'bi-speedometer',      'unit' => 'hPa',  'color' => '108, 117, 125', 'decimals' => 1, 'zero' => false, 'chart_type' => 'line'],
+            ['id' => 'wind_speed',    'field' => 'wind_speed_kmh',  'heading' => 'station.wind_speed_heading',         'icon' => 'bi-wind',             'unit' => 'km/h', 'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true,  'chart_type' => 'line'],
+            ['id' => 'radiation',     'field' => 'radiation_wm2',   'heading' => 'station.radiation_trend_heading',    'icon' => 'bi-sun',              'unit' => 'W/m²', 'color' => '255, 193, 7',   'decimals' => 0, 'zero' => true,  'chart_type' => 'line'],
+            ['id' => 'precipitation', 'field' => 'precipitation_mm','heading' => 'station.precipitation_trend_heading','icon' => 'bi-cloud-rain',       'unit' => 'mm',   'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true,  'chart_type' => 'bar'],
         ];
 
         $trendCharts = [];
         foreach ($metricDefs as $def) {
-            $values = array_column($chronological, $def['field']);
+            $values = array_column($fullSeries, $def['field']);
             if (array_filter($values, static fn($v): bool => $v !== null) === []) {
                 continue;
             }
+            // Precipitation bar chart: suppress entirely when no rain was recorded.
+            if ($def['chart_type'] === 'bar') {
+                $hasRain = array_filter($values, static fn($v): bool => $v !== null && $v > 0.0) !== [];
+                if (!$hasRain) {
+                    continue;
+                }
+            }
+
             $chart = [
-                'id'       => $def['id'],
-                'heading'  => $def['heading'],
-                'icon'     => $def['icon'],
-                'unit'     => $def['unit'],
-                'color'    => $def['color'],
-                'decimals' => $def['decimals'],
-                'zero'     => $def['zero'],
-                'values'   => $values,
+                'id'         => $def['id'],
+                'heading'    => $def['heading'],
+                'icon'       => $def['icon'],
+                'unit'       => $def['unit'],
+                'color'      => $def['color'],
+                'decimals'   => $def['decimals'],
+                'zero'       => $def['zero'],
+                'chart_type' => $def['chart_type'],
+                'values'     => $values,
             ];
 
             // The wind-speed chart draws each point as an arrow rotated to the
             // wind direction (bearing it blows *from*); calm/unknown hours have
             // a null bearing and fall back to a plain dot.
             if ($def['id'] === 'wind_speed') {
-                $chart['bearings'] = array_column($chronological, 'wind_dir_bearing');
-                $chart['dir_codes'] = array_column($chronological, 'wind_dir_code');
+                $chart['bearings'] = array_column($fullSeries, 'wind_dir_bearing');
+                $chart['dir_codes'] = array_column($fullSeries, 'wind_dir_code');
             }
 
             $trendCharts[] = $chart;
