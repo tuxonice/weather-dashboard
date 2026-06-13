@@ -119,6 +119,7 @@
                                 <th scope="col" class="text-end">{{ 'station.col_humidity'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_pressure'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_rain'|trans }}</th>
+                                <th scope="col" class="text-end">{{ 'station.col_radiation'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_wind'|trans }}</th>
                                 <th scope="col" class="text-center">{{ 'station.col_dir'|trans }}</th>
                             </tr>
@@ -151,6 +152,13 @@
                                     <td class="text-end">
                                         {% if row.precipitation_mm is not null %}
                                             {{ row.precipitation_mm|number_format(1) }} mm
+                                        {% else %}
+                                            <span class="text-body-secondary">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if row.radiation_wm2 is not null %}
+                                            {{ row.radiation_wm2|number_format(0) }} W/m²
                                         {% else %}
                                             <span class="text-body-secondary">—</span>
                                         {% endif %}
@@ -356,6 +364,7 @@
         color: c.color,
         decimals: c.decimals,
         zero: c.zero,
+        chartType: c.chart_type,
         values: c.values,
         bearings: c.bearings|default(null),
         dirCodes: c.dir_codes|default(null),
@@ -396,7 +405,15 @@
                 return;
             }
 
-            var dataset = {
+            var isBar = c.chartType === 'bar';
+
+            var dataset = isBar ? {
+                data: c.values,
+                backgroundColor: 'rgba(' + c.color + ', 0.6)',
+                borderColor: 'rgba(' + c.color + ', 0.9)',
+                borderWidth: 1,
+                borderRadius: 3,
+            } : {
                 data: c.values,
                 borderColor: 'rgba(' + c.color + ', 0.9)',
                 backgroundColor: 'rgba(' + c.color + ', 0.12)',
@@ -404,8 +421,6 @@
                 fill: true,
                 // Spline smoothing.
                 tension: 0.4,
-                // Bridge the occasional missing hourly reading.
-                spanGaps: true,
                 pointRadius: 2,
                 pointHoverRadius: 5,
             };
@@ -431,7 +446,7 @@
             }
 
             new Chart(el, {
-                type: 'line',
+                type: isBar ? 'bar' : 'line',
                 data: {
                     labels: data.labels,
                     datasets: [dataset],
@@ -454,6 +469,9 @@
                         tooltip: {
                             callbacks: {
                                 label: function (ctx) {
+                                    if (ctx.parsed.y === null || ctx.parsed.y === undefined) {
+                                        return undefined;
+                                    }
                                     return ctx.parsed.y.toFixed(c.decimals) + ' ' + c.unit;
                                 },
                                 afterLabel: function (ctx) {

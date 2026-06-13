@@ -140,6 +140,34 @@ final class StationObservationRepository
     }
 
     /**
+     * Ordered history (oldest → newest) covering every timestamp in the 24h
+     * payload. Timestamps where the station has no data (or an empty reading)
+     * are included with a null observation so callers can render chart gaps.
+     *
+     * @return list<array{at: DateTimeImmutable, observation: StationObservation|null}>
+     */
+    public function historyForStationFull(int $stationId): array
+    {
+        $timestamps = $this->timestampsAsc();
+        $key = (string) $stationId;
+        $history = [];
+
+        foreach ($timestamps as $timestampLabel => $at) {
+            $raw = $this->rawForTimestamp($timestampLabel);
+            $obs = null;
+            if (isset($raw[$key]) && is_array($raw[$key])) {
+                $candidate = StationObservation::fromArray($raw[$key]);
+                if (!$candidate->isEmpty()) {
+                    $obs = $candidate;
+                }
+            }
+            $history[] = ['at' => $at, 'observation' => $obs];
+        }
+
+        return $history;
+    }
+
+    /**
      * @return array<string, DateTimeImmutable> Map of raw label → parsed timestamp, newest first.
      */
     private function timestampsDesc(): array
