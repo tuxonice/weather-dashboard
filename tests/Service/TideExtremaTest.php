@@ -58,4 +58,29 @@ final class TideExtremaTest extends TestCase
         self::assertGreaterThanOrEqual(3, count($extrema));
         self::assertLessThanOrEqual(5, count($extrema));
     }
+
+    public function testDetectsFlatPeaksAndValleysAsSingleExtremum(): void
+    {
+        // A flat peak and a flat valley (two consecutive equal values)
+        // must each be reported once, not ignored or duplicated.
+        $series = [
+            ['t' => 0,  'h' => 1.0],
+            ['t' => 10, 'h' => 2.0],
+            ['t' => 20, 'h' => 2.0], // flat peak
+            ['t' => 30, 'h' => 1.5],
+            ['t' => 40, 'h' => 1.0],
+            ['t' => 50, 'h' => 1.0], // flat valley
+            ['t' => 60, 'h' => 2.0],
+        ];
+
+        $extrema = TideExtrema::findInSeries($series);
+
+        self::assertSame(
+            [
+                ['t' => 15, 'h' => 2.0, 'type' => 'high'],
+                ['t' => 45, 'h' => 1.0, 'type' => 'low'],
+            ],
+            $extrema,
+        );
+    }
 }
