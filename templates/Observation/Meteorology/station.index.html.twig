@@ -12,8 +12,13 @@
             <p class="text-body-secondary mb-0">
                 {{ 'station.subtitle'|trans }}
                 {% if updated_at %}
-                    <span class="ms-1">{{ 'common.updated'|trans }} {{ updated_at|date('Y-m-d H:i', timezone) }}
-                    <span class="text-body-tertiary">({{ timezone }})</span></span>
+                    <span class="ms-1"
+                          data-relative-time
+                          data-timestamp="{{ updated_at|date('c', timezone) }}"
+                          data-locale="{{ app_locale|default('pt') }}"
+                          data-prefix="{{ 'common.updated'|trans }}">
+                        {{ 'common.updated'|trans }} {{ updated_at|date('Y-m-d H:i', timezone) }}
+                    </span>
                 {% endif %}
             </p>
         </div>
@@ -128,4 +133,5 @@
         });
     })();
 </script>
+<script src="/js/relative-time.js"></script>
 {% endblock %}

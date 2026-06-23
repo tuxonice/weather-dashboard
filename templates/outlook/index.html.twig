@@ -93,9 +93,13 @@
                         </span>
                     </div>
                     {% if region.update_at_local %}
-                        <span class="text-body-secondary small">
+                        <span class="text-body-secondary small"
+                              data-relative-time
+                              data-timestamp="{{ region.update_at_local|date('c', region.timezone) }}"
+                              data-locale="{{ app_locale|default('pt') }}"
+                              data-prefix="{{ 'common.updated'|trans }}">
                             {{ 'common.feed_updated_at'|trans({ '%datetime%': region.update_at_local|date('Y-m-d H:i', region.timezone) }) }}
-                            <span class="text-body-tertiary">({{ region.timezone }})</span>
+                            ({{ region.timezone }})
                         </span>
                     {% endif %}
                 </div>
@@ -215,4 +219,5 @@
     })();
 </script>
 {% endif %}
+<script src="/js/relative-time.js"></script>
 {% endblock %}
