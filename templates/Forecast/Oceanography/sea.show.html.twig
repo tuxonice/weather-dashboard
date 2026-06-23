@@ -67,6 +67,7 @@
             });
         </script>
     {% endif %}
+    <script src="/js/relative-time.js"></script>
 {% endblock %}
 
 {% block body %}
@@ -111,9 +112,12 @@
                     <i class="bi bi-calendar-week me-2 text-primary" aria-hidden="true"></i>{{ 'sea.forecast_heading'|trans }}
                 </h2>
                 {% if updated_at %}
-                    <span class="small text-body-secondary">
+                    <span class="small text-body-secondary"
+                          data-relative-time
+                          data-timestamp="{{ updated_at|date('c', timezone) }}"
+                          data-locale="{{ app_locale|default('pt') }}"
+                          data-prefix="{{ 'common.updated'|trans }}">
                         {{ 'common.updated'|trans }} {{ updated_at|date('Y-m-d H:i', timezone) }}
-                        <span class="text-body-secondary">({{ timezone }})</span>
                     </span>
                 {% endif %}
             </div>

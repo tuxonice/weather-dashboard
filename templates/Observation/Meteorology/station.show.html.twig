@@ -42,9 +42,12 @@
             <section class="mb-4" aria-labelledby="latest-heading">
                 <h2 id="latest-heading" class="h5 mb-3">
                     <i class="bi bi-speedometer2 me-2 text-primary" aria-hidden="true"></i>{{ 'station.latest_reading'|trans }}
-                    <span class="text-body-secondary small ms-1">
-                        · {{ latest.at|date('Y-m-d H:i', timezone) }}
-                        <span class="text-body-tertiary">({{ timezone }})</span>
+                    <span class="text-body-secondary small ms-1"
+                          data-relative-time
+                          data-timestamp="{{ latest.at|date('c', timezone) }}"
+                          data-locale="{{ app_locale|default('pt') }}"
+                          data-prefix="·">
+                        · {{ latest.at|date('Y-m-d H:i', timezone) }} ({{ timezone }})
                     </span>
                 </h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
@@ -490,4 +493,5 @@
     })();
 </script>
 {% endif %}
+<script src="/js/relative-time.js"></script>
 {% endblock %}
