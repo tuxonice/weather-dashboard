@@ -26,7 +26,11 @@
                     <i class="bi bi-thermometer-half me-1" aria-hidden="true"></i>{{ 'home.extremes.title'|trans }}
                 </h2>
                 {% if extremes.updated_at %}
-                    <span class="small text-body-tertiary">
+                    <span class="small text-body-tertiary"
+                          data-relative-time
+                          data-timestamp="{{ extremes.updated_at|date('c') }}"
+                          data-locale="{{ app_locale|default('pt') }}"
+                          data-prefix="{{ 'common.updated'|trans }}">
                         {{ 'common.updated'|trans }} {{ extremes.updated_at|date('H:i', false) }}
                     </span>
                 {% endif %}
@@ -221,4 +225,8 @@
             </a>
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script src="/js/relative-time.js"></script>
 {% endblock %}
