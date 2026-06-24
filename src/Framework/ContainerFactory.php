@@ -131,16 +131,18 @@ final class ContainerFactory
         // cache directly; only repositories that bypass those factories
         // (e.g. `StationObservationRepository` calling `fetchData()` on a
         // not-yet-wrapped endpoint) still need the full connector.
+        $cacheTtl = (int) ($_ENV['CACHE_TTL_SECONDS'] ?? $_SERVER['CACHE_TTL_SECONDS'] ?? 1800);
+
         $container->register(CacheInterface::class, CacheInterface::class)
             ->setFactory([IpmaConnectorFactory::class, 'createCache'])
             ->addArgument($projectDir . '/var/cache/ipma')
-            ->addArgument(1800)
+            ->addArgument($cacheTtl)
             ->addArgument($projectDir . '/var/log/ipma-cache.log');
 
         $container->register(ApiConnectorInterface::class, ApiConnectorInterface::class)
             ->setFactory([IpmaConnectorFactory::class, 'create'])
             ->addArgument($projectDir . '/var/cache/ipma')
-            ->addArgument(1800)
+            ->addArgument($cacheTtl)
             ->addArgument($projectDir . '/var/log/ipma-cache.log');
 
         $container->register(LocationRepository::class, LocationRepository::class)
