@@ -4,15 +4,74 @@
 {% block title %}{{ 'warning.title'|trans }}{% endblock %}
 
 {% block body %}
-    <div class="mb-4">
-        <h1 class="h3 mb-1">
-            <i class="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>{{ 'warning.heading'|trans }}
-        </h1>
-        <p class="text-body-secondary mb-0">
-            {{ 'warning.subtitle'|trans }}
-        </p>
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>{{ 'warning.heading'|trans }}
+            </h1>
+            <p class="text-body-secondary mb-0">
+                {{ 'warning.subtitle'|trans }}
+            </p>
+        </div>
+        <div class="btn-group" role="group" aria-label="{{ 'warning.heading'|trans }}">
+            {% for tab in day_tabs %}
+                <a href="{{ path('warnings_index', { day: tab.key }) }}"
+                   class="btn {{ tab.active ? 'btn-primary' : 'btn-outline-secondary' }}"
+                   {% if tab.active %}aria-current="page"{% endif %}>
+                    {{ tab.label|trans }}
+                </a>
+            {% endfor %}
+        </div>
     </div>
 
+    {# Maps section #}
+    <section class="mb-4" aria-labelledby="map-heading">
+        <h2 id="map-heading" class="h5 mb-1">
+            <i class="bi bi-map me-2 text-primary" aria-hidden="true"></i>{{ 'warning.map_heading'|trans }}
+        </h2>
+        <p class="text-body-secondary small mb-3">{{ 'warning.map_subtitle'|trans }}</p>
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-map-fill text-primary" aria-hidden="true"></i>
+                        <span class="fw-semibold">{{ 'warning.map_mainland'|trans }}</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="warning-map-mainland" role="img" aria-label="{{ 'warning.map_aria'|trans }}" style="min-height: 420px; display: flex; align-items: stretch;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="row g-3 h-100">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header d-flex align-items-center gap-2 py-2">
+                                <i class="bi bi-map-fill text-primary" aria-hidden="true"></i>
+                                <span class="fw-semibold">{{ 'warning.map_madeira'|trans }}</span>
+                            </div>
+                            <div class="card-body p-2">
+                                <div id="warning-map-madeira" role="img" aria-label="Madeira" style="min-height: 180px; display: flex; align-items: center; justify-content: center;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header d-flex align-items-center gap-2 py-2">
+                                <i class="bi bi-map-fill text-primary" aria-hidden="true"></i>
+                                <span class="fw-semibold">{{ 'warning.map_azores'|trans }}</span>
+                            </div>
+                            <div class="card-body p-2">
+                                <div id="warning-map-azores" role="img" aria-label="Açores" style="min-height: 220px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# Warning cards #}
     {% if error %}
         <div class="alert alert-danger" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
@@ -24,36 +83,41 @@
             {{ 'warning.all_green'|trans }}
         </div>
     {% else %}
-        <div class="row g-3">
-            {% for area, items in grouped %}
+        <h2 class="h5 mb-3">
+            <i class="bi bi-list-ul me-2 text-primary" aria-hidden="true"></i>{{ 'warning.active_heading'|trans }}
+        </h2>
+        <div class="row g-3" id="warning-cards">
+            {% for locationName, items in grouped %}
                 {% set top = items|first.level %}
-                <div class="col-12 col-lg-6">
-                    <div class="card h-100 border-{{ top.color }}">
-                        <div class="card-header bg-black text-white d-flex justify-content-between">
-                            <span class="fw-semibold">
-                                <i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>{{ area }}
-                            </span>
-                            <span class="badge text-bg-light text-dark">
+                <div class="col-12 col-md-6 col-xl-4" id="area-card-{{ items|first.warning.warningIdArea }}">
+                    <div class="card h-100 shadow-sm border-0 warning-card warning-card--{{ top.color == 'yellow' ? 'yellow' : top.color }}">
+                        <div class="card-header warning-card__header warning-card__header--{{ top.color == 'yellow' ? 'yellow' : top.color }} d-flex align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <i class="bi {{ top.icon }} flex-shrink-0" aria-hidden="true"></i>
+                                <span class="fw-semibold text-truncate">{{ locationName }}</span>
+                            </div>
+                            <span class="badge bg-white bg-opacity-25 text-dark flex-shrink-0 fs-xs">
                                 {{ (items|length == 1 ? 'warning.count_one' : 'warning.count_many')|trans({ '%count%': items|length }) }}
                             </span>
                         </div>
-                        <ul class="list-group list-group-flush">
+                        <ul class="list-group list-group-flush flex-grow-1">
                             {% for item in items %}
-                                <li class="list-group-item">
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="badge text-bg-{{ item.level.color }}">
+                                <li class="list-group-item px-3 py-2">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge text-bg-{{ item.level.color }} flex-shrink-0">
                                             <i class="bi {{ item.level.icon }} me-1" aria-hidden="true"></i>
                                             {{ item.level.label|trans }}
                                         </span>
-                                        <span class="fw-semibold">{{ item.warning.awarenessTypeName }}</span>
+                                        <span class="fw-semibold small text-truncate">{{ item.warning.awarenessTypeName }}</span>
                                     </div>
-                                    <div class="small text-body-secondary mb-1">
-                                        {{ ('common.weekday_short.' ~ item.warning.startTime|date('N', item.timezone))|trans }}, {{ item.warning.startTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.startTime|date('n', item.timezone))|trans }} {{ item.warning.startTime|date('H:i', item.timezone) }}
-                                        &rarr;
-                                        {{ ('common.weekday_short.' ~ item.warning.endTime|date('N', item.timezone))|trans }}, {{ item.warning.endTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.endTime|date('n', item.timezone))|trans }} {{ item.warning.endTime|date('H:i', item.timezone) }}
+                                    <div class="small text-body-secondary d-flex align-items-center gap-1 flex-wrap mb-1">
+                                        <i class="bi bi-clock flex-shrink-0" aria-hidden="true"></i>
+                                        <span>{{ ('common.weekday_short.' ~ item.warning.startTime|date('N', item.timezone))|trans }}, {{ item.warning.startTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.startTime|date('n', item.timezone))|trans }} {{ item.warning.startTime|date('H:i', item.timezone) }}</span>
+                                        <i class="bi bi-arrow-right flex-shrink-0" aria-hidden="true"></i>
+                                        <span>{{ ('common.weekday_short.' ~ item.warning.endTime|date('N', item.timezone))|trans }}, {{ item.warning.endTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.endTime|date('n', item.timezone))|trans }} {{ item.warning.endTime|date('H:i', item.timezone) }}</span>
                                     </div>
                                     {% if item.warning.text %}
-                                        <div class="small">{{ item.warning.text }}</div>
+                                        <div class="small text-body-secondary fst-italic">{{ item.warning.text }}</div>
                                     {% endif %}
                                 </li>
                             {% endfor %}
@@ -63,4 +127,81 @@
             {% endfor %}
         </div>
     {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function () {
+    var LEVEL_COLORS = {
+        green:  '#adb5bd',
+        yellow: '#ffc107',
+        orange: '#fd7e14',
+        red:    '#dc3545'
+    };
+
+    var levels = {{ map_levels_json|raw }};
+
+    var SVG_FILES = {
+        mainland: 'warning-map-mainland',
+        madeira:  'warning-map-madeira',
+        azores:   'warning-map-azores',
+    };
+
+    Object.keys(SVG_FILES).forEach(function (region) {
+        var containerId = SVG_FILES[region];
+        fetch('/geo/warning-areas-' + region + '.svg')
+            .then(function (r) { return r.text(); })
+            .then(function (svgText) {
+                var container = document.getElementById(containerId);
+                container.innerHTML = svgText;
+                var svg = container.querySelector('svg');
+                if (svg) {
+                    svg.style.width = '100%';
+                    svg.style.height = '100%';
+                    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                }
+                container.querySelectorAll('path[data-area]').forEach(function (path) {
+                    var area  = path.getAttribute('data-area');
+                    var name  = path.getAttribute('data-name');
+                    var level = levels[area] || 'green';
+                    var color = LEVEL_COLORS[level] || LEVEL_COLORS.green;
+                    path.setAttribute('fill', color);
+                    path.style.cursor = 'pointer';
+                    path.setAttribute('title', name + ' (' + area + ')');
+                    path.addEventListener('mouseenter', function () { path.setAttribute('fill', '#0d6efd'); });
+                    path.addEventListener('mouseleave', function () { path.setAttribute('fill', color); });
+                    path.addEventListener('click', function () {
+                        var card = document.getElementById('area-card-' + area);
+                        if (card) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            card.classList.add('ring-highlight');
+                            setTimeout(function () { card.classList.remove('ring-highlight'); }, 2000);
+                        }
+                    });
+                });
+            });
+    });
+})();
+</script>
+<style>
+.ring-highlight { outline: 3px solid #0d6efd; outline-offset: 3px; transition: outline 0.3s; }
+[id^="warning-map-"] svg { width: 100%; height: 100%; display: block; }
+[id^="warning-map-"] svg path { transition: fill 0.15s; }
+
+.warning-card { border-radius: 0.5rem; overflow: hidden; }
+
+.warning-card__header { padding: 0.6rem 1rem; }
+
+.warning-card__header--danger  { background-color: #dc3545; color: #fff; }
+.warning-card__header--warning { background-color: #fd7e14; color: #fff; }
+.warning-card__header--yellow  { background-color: #ffc107; color: #000; }
+.warning-card__header--success { background-color: #198754; color: #fff; }
+.warning-card__header--secondary { background-color: #6c757d; color: #fff; }
+
+.warning-card--danger  { border-top: 3px solid #dc3545 !important; }
+.warning-card--warning { border-top: 3px solid #fd7e14 !important; }
+.warning-card--yellow  { border-top: 3px solid #ffc107 !important; }
+
+.fs-xs { font-size: 0.75rem; }
+</style>
 {% endblock %}

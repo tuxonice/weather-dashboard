@@ -242,6 +242,13 @@ warning:
     count_many: "%count% avisos"
     banner_heading_one: "%count% aviso activo para esta área"
     banner_heading_many: "%count% avisos activos para esta área"
+    map_heading: "Mapa de avisos"
+    map_subtitle: "Todas as áreas de aviso. Cinzento = sem aviso activo."
+    map_aria: "Mapa das áreas de aviso meteorológico do IPMA"
+    map_mainland: "Portugal Continental"
+    map_madeira: "Madeira"
+    map_azores: "Açores"
+    active_heading: "Avisos activos"
 
 station:
     title: "Estações meteorológicas · Painel Meteorológico"

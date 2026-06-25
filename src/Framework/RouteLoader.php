@@ -96,8 +96,9 @@ final class RouteLoader
 
             // Warnings
             $routes->add("warnings_index.$locale", new Route(
-                path: "/$locale/{$s['warnings'][$locale]}",
-                defaults: ['_controller' => [WarningController::class, 'index'], '_locale' => $locale],
+                path: "/$locale/{$s['warnings'][$locale]}/{day}",
+                defaults: ['_controller' => [WarningController::class, 'index'], '_locale' => $locale, 'day' => 'today'],
+                requirements: ['day' => $s['day_tomorrow'][$locale] . '|' . $s['day_day_after'][$locale]],
                 methods: ['GET'],
             ));
 

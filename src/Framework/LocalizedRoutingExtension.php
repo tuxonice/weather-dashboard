@@ -85,7 +85,7 @@ final class LocalizedRoutingExtension extends AbstractExtension
         if (!isset($parameters['day']) || !is_string($parameters['day'])) {
             return $parameters;
         }
-        if (!preg_match('/^(?:outlook_index|fire_risk_index)\.(\w+)$/', $localizedName, $m)) {
+        if (!preg_match('/^(?:outlook_index|fire_risk_index|warnings_index)\.(\w+)$/', $localizedName, $m)) {
             return $parameters;
         }
 
