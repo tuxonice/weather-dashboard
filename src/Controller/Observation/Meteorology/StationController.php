@@ -177,7 +177,8 @@ final class StationController
         // Energy (Wh/m²) = Σ (W[i] + W[i+1]) / 2 × Δh → divide by 1000 for kWh/m².
         $radiationTotalKwhM2 = null;
         $radSeries = array_values(array_filter(
-            array_map(static fn(array $row): ?array => $row['radiation_wm2'] !== null
+            array_map(
+                static fn(array $row): ?array => $row['radiation_wm2'] !== null
                 ? ['at' => $row['at'], 'w' => $row['radiation_wm2']]
                 : null,
                 $fullSeries,
