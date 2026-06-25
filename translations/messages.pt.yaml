@@ -290,6 +290,7 @@ station:
     pressure_trend_heading: "Tendência da pressão"
     wind_speed_heading: "Tendência da velocidade do vento"
     radiation_trend_heading: "Tendência da radiação solar"
+    radiation_daily_energy: "energia diária estimada"
     precipitation_trend_heading: "Precipitação"
     could_not_load_obs: "Não foi possível carregar as observações: "
     no_recent_readings: "Sem leituras recentes para esta estação."

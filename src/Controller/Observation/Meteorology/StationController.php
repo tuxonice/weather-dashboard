@@ -172,6 +172,26 @@ final class StationController
             ['id' => 'precipitation', 'field' => 'precipitation_mm','heading' => 'station.precipitation_trend_heading','icon' => 'bi-cloud-rain',       'unit' => 'mm',   'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true,  'chart_type' => 'bar'],
         ];
 
+        // Integrate radiation over the day using the trapezoidal rule.
+        // Each interval between consecutive timestamps is (t[i+1] - t[i]) in hours.
+        // Energy (Wh/m²) = Σ (W[i] + W[i+1]) / 2 × Δh → divide by 1000 for kWh/m².
+        $radiationTotalKwhM2 = null;
+        $radSeries = array_values(array_filter(
+            array_map(static fn(array $row): ?array => $row['radiation_wm2'] !== null
+                ? ['at' => $row['at'], 'w' => $row['radiation_wm2']]
+                : null,
+                $fullSeries,
+            ),
+        ));
+        if (count($radSeries) >= 2) {
+            $totalWh = 0.0;
+            for ($ri = 0; $ri < count($radSeries) - 1; $ri++) {
+                $deltaH = ($radSeries[$ri + 1]['at']->getTimestamp() - $radSeries[$ri]['at']->getTimestamp()) / 3600.0;
+                $totalWh += ($radSeries[$ri]['w'] + $radSeries[$ri + 1]['w']) / 2.0 * $deltaH;
+            }
+            $radiationTotalKwhM2 = $totalWh / 1000.0;
+        }
+
         $trendCharts = [];
         foreach ($metricDefs as $def) {
             $values = array_column($fullSeries, $def['field']);
@@ -220,6 +240,7 @@ final class StationController
             'wind_rose_calm' => $windRose['calm'],
             'trend_labels' => $trendLabels,
             'trend_charts' => $trendCharts,
+            'radiation_total_kwh_m2' => $radiationTotalKwhM2,
         ]);
 
         return new Response($html);

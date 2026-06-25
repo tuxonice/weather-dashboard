@@ -194,6 +194,12 @@
             <section class="mt-4" aria-labelledby="trend-{{ chart.id }}-heading">
                 <h2 id="trend-{{ chart.id }}-heading" class="h5 mb-1">
                     <i class="bi {{ chart.icon }} me-2 text-primary" aria-hidden="true"></i>{{ chart.heading|trans }}
+                    {% if chart.id == 'radiation' and radiation_total_kwh_m2 is not null %}
+                        <span class="ms-2 badge bg-warning-subtle text-warning-emphasis fw-normal fs-6">
+                            {{ radiation_total_kwh_m2|number_format(2) }} kWh/m²
+                            <span class="fw-lighter small">{{ 'station.radiation_daily_energy'|trans }}</span>
+                        </span>
+                    {% endif %}
                 </h2>
                 <p class="text-body-secondary small mb-3">{{ 'station.trend_subtitle'|trans }}</p>
                 <div class="card shadow-sm">

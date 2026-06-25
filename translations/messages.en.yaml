@@ -290,6 +290,7 @@ station:
     pressure_trend_heading: "Pressure trend"
     wind_speed_heading: "Wind speed trend"
     radiation_trend_heading: "Solar radiation trend"
+    radiation_daily_energy: "estimated daily energy"
     precipitation_trend_heading: "Precipitation"
     could_not_load_obs: "Could not load observations: "
     no_recent_readings: "No recent readings available for this station."
