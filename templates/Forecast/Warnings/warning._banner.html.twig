@@ -21,9 +21,9 @@
                             </span>
                             <span class="fw-semibold">{{ item.warning.awarenessTypeName }}</span>
                             <span class="text-body-secondary">
-                                {{ item.warning.startTime|date('Y-m-d H:i', item.timezone) }}
+                                {{ ('common.weekday_short.' ~ item.warning.startTime|date('N', item.timezone))|trans }}, {{ item.warning.startTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.startTime|date('n', item.timezone))|trans }} {{ item.warning.startTime|date('H:i', item.timezone) }}
                                 &rarr;
-                                {{ item.warning.endTime|date('Y-m-d H:i', item.timezone) }}
+                                {{ ('common.weekday_short.' ~ item.warning.endTime|date('N', item.timezone))|trans }}, {{ item.warning.endTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.endTime|date('n', item.timezone))|trans }} {{ item.warning.endTime|date('H:i', item.timezone) }}
                             </span>
                             {% if item.warning.text %}
                                 <span class="w-100">{{ item.warning.text }}</span>

@@ -110,6 +110,7 @@ chart:
 footer:
     data_source: "Dados meteorológicos fornecidos pela <a href=\"https://api.ipma.pt/\" target=\"_blank\" rel=\"noopener\">API do IPMA</a>."
     source_code: "<a href=\"https://github.com/tuxonice/weather-dashboard\" target=\"_blank\" rel=\"noopener\"><i class=\"bi bi-github\" aria-hidden=\"true\"></i> Código fonte</a>"
+    local_time: "Horários em hora local"
 
 home:
     title: "Painel Meteorológico"
@@ -139,7 +140,7 @@ home:
 location:
     title: "Localidades · Painel Meteorológico"
     heading: "Localidades"
-    subtitle: "Escolha uma localidade para ver a previsão. Os dados são mantidos em cache local durante uma hora."
+    subtitle: "Escolha uma localidade para ver a previsão. Os dados são mantidos em cache local 15 minutos."
     load_error: "Não foi possível carregar as localidades do IPMA: "
     none_returned: "O IPMA não devolveu nenhuma localidade."
     breadcrumb: "Localidades"

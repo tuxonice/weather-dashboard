@@ -47,7 +47,7 @@
                           data-timestamp="{{ latest.at|date('c', timezone) }}"
                           data-locale="{{ app_locale|default('pt') }}"
                           data-prefix="·">
-                        · {{ latest.at|date('Y-m-d H:i', timezone) }} ({{ timezone }})
+                        · {{ latest.at|date('Y-m-d H:i', timezone) }}
                     </span>
                 </h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
@@ -117,7 +117,7 @@
                     <table class="table table-sm align-middle bg-body shadow-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col">{{ 'station.col_time'|trans }} <span class="text-body-tertiary fw-normal">({{ timezone }})</span></th>
+                                <th scope="col">{{ 'station.col_time'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_temp'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_humidity'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_pressure'|trans }}</th>

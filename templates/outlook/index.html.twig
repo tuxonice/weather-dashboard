@@ -99,7 +99,6 @@
                               data-locale="{{ app_locale|default('pt') }}"
                               data-prefix="{{ 'common.updated'|trans }}">
                             {{ 'common.feed_updated_at'|trans({ '%datetime%': region.update_at_local|date('Y-m-d H:i', region.timezone) }) }}
-                            ({{ region.timezone }})
                         </span>
                     {% endif %}
                 </div>
