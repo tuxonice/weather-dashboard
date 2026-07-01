@@ -184,7 +184,8 @@ final class StationController
                 $fullSeries,
             ),
         ));
-        if (count($radSeries) === 24) {
+        $zeroReadings = count(array_filter($radSeries, static fn(array $r): bool => $r['w'] == 0.0));
+        if (count($radSeries) === 24 && $zeroReadings < 12) {
             $totalWh = 0.0;
             for ($ri = 0; $ri < count($radSeries) - 1; $ri++) {
                 $deltaH = ($radSeries[$ri + 1]['at']->getTimestamp() - $radSeries[$ri]['at']->getTimestamp()) / 3600.0;
