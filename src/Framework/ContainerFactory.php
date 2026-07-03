@@ -29,7 +29,6 @@ use App\Service\IpmaConnectorFactory;
 use App\Service\Observation\Biology\BivalveRepository;
 use App\Service\Observation\Climate\ClimateRepository;
 use App\Service\Observation\Meteorology\StationExtremesService;
-use App\Service\Observation\Meteorology\StationHourlyRepository;
 use App\Service\Observation\Meteorology\StationObservationRepository;
 use App\Service\Observation\Meteorology\StationRepository;
 use App\Service\Observation\Seismic\SeismicRepository;
@@ -182,9 +181,6 @@ final class ContainerFactory
         $container->register(StationObservationRepository::class, StationObservationRepository::class)
             ->addArgument(new Reference(ApiConnectorInterface::class));
 
-        $container->register(StationHourlyRepository::class, StationHourlyRepository::class)
-            ->addArgument(new Reference(ApiConnectorInterface::class));
-
         $container->register(FireRiskRepository::class, FireRiskRepository::class)
             ->addArgument(new Reference(CacheInterface::class));
 
@@ -239,8 +235,7 @@ final class ContainerFactory
             ->setPublic(true)
             ->addArgument(new Reference('twig'))
             ->addArgument(new Reference(StationRepository::class))
-            ->addArgument(new Reference(StationObservationRepository::class))
-            ->addArgument(new Reference(StationHourlyRepository::class));
+            ->addArgument(new Reference(StationObservationRepository::class));
 
         $container->register(FireRiskController::class, FireRiskController::class)
             ->setPublic(true)
