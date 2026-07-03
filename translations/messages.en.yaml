@@ -242,6 +242,13 @@ warning:
     count_many: "%count% warnings"
     banner_heading_one: "%count% active warning for this area"
     banner_heading_many: "%count% active warnings for this area"
+    map_heading: "Warning map"
+    map_subtitle: "All warning areas. Grey = no active warning."
+    map_aria: "Map of IPMA meteorological warning areas"
+    map_mainland: "Mainland Portugal"
+    map_madeira: "Madeira"
+    map_azores: "Azores"
+    active_heading: "Active warnings"
 
 station:
     title: "Weather stations · Weather Dashboard"
