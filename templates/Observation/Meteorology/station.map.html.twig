@@ -103,7 +103,7 @@
         var map = L.map('station-map', {
             center: [39.5, -8.0],
             zoom: 7,
-            scrollWheelZoom: false,
+            scrollWheelZoom: true,
         });
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -140,6 +140,39 @@
 
         function rgb(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
 
+        function textColor(t) {
+            if (t === null || t === undefined) return '#000';
+            var stops = [
+                { t:  0, c: [ 33, 102, 172] },
+                { t: 10, c: [ 67, 147, 195] },
+                { t: 15, c: [146, 197, 222] },
+                { t: 20, c: [254, 224, 139] },
+                { t: 25, c: [244, 165,  68] },
+                { t: 30, c: [215,  48,  39] },
+                { t: 35, c: [140,  10,  20] },
+            ];
+            var c;
+            if (t <= stops[0].t) {
+                c = stops[0].c;
+            } else {
+                c = stops[stops.length - 1].c;
+                for (var i = 1; i < stops.length; i++) {
+                    if (t <= stops[i].t) {
+                        var a = stops[i - 1], b = stops[i], k = (t - a.t) / (b.t - a.t);
+                        c = [
+                            Math.round(a.c[0] + (b.c[0] - a.c[0]) * k),
+                            Math.round(a.c[1] + (b.c[1] - a.c[1]) * k),
+                            Math.round(a.c[2] + (b.c[2] - a.c[2]) * k),
+                        ];
+                        break;
+                    }
+                }
+            }
+            var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255;
+            var lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return lum < 0.45 ? '#fff' : '#000';
+        }
+
         function fmt(value, unit, decimals) {
             if (value === null || value === undefined) return '—';
             return Number(value).toFixed(decimals == null ? 1 : decimals) + ' ' + unit;
@@ -161,6 +194,7 @@
             var icon = L.divIcon({
                 className: '',
                 html: '<div class="' + cls + '" style="background:' + tempColor(temp)
+                      + ';color:' + textColor(temp)
                       + ';padding:4px 6px;">' + escapeHtml(label) + '</div>',
                 iconSize: [34, 22],
                 iconAnchor: [17, 11],

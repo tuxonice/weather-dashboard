@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Observation\Meteorology;
 
-use App\Service\Observation\Meteorology\StationHourlyRepository;
 use App\Service\Observation\Meteorology\StationObservationRepository;
 use App\Service\Observation\Meteorology\StationRepository;
 use App\Service\Observation\Meteorology\StationWindDirection;
@@ -20,8 +19,8 @@ use Twig\Environment;
  * - `index`: lists every station together with its latest observation
  *   (temperature, humidity, wind).
  * - `show`:  renders 24h of history for a single station.
- * - `map`:   plots every station's latest-hour reading on a Leaflet map
- *            (powered by IPMA's `obs-surface.geojson` single-hour feed).
+ * - `map`:   plots every station's latest reading on a Leaflet map
+ *            (same data source as the list: `observations.json` via the package).
  */
 final class StationController
 {
@@ -29,7 +28,6 @@ final class StationController
         private readonly Environment $twig,
         private readonly StationRepository $stations,
         private readonly StationObservationRepository $observations,
-        private readonly StationHourlyRepository $hourly,
     ) {
     }
 
@@ -256,27 +254,15 @@ final class StationController
         $stats = ['temp_min' => null, 'temp_max' => null, 'count' => 0];
 
         try {
-            foreach ($this->hourly->all() as $o) {
-                // The library returns 0.0 for missing coordinates when the
-                // geometry is absent; skip those rather than dropping a
-                // marker in the Atlantic.
-                if ($o->latitude === 0.0 && $o->longitude === 0.0) {
-                    continue;
-                }
+            $stations = $this->stations->all();
+            $latest = $this->observations->latestAll();
+            $updatedAt = $latest['at'];
+            $byStation = $latest['observations'];
 
-                // `idEstacao` is the only field we really need to key on.
-                if ($o->idEstacao === null) {
-                    continue;
-                }
+            foreach ($stations as $station) {
+                $obs = $byStation[$station->id] ?? null;
 
-                if ($o->time !== null && $updatedAt === null) {
-                    try {
-                        $updatedAt = new \DateTimeImmutable($o->time, new \DateTimeZone('UTC'));
-                    } catch (\Exception) {
-                    }
-                }
-
-                $temp = $o->temperatura;
+                $temp = $obs?->temperatureC;
                 if ($temp !== null) {
                     $stats['temp_min'] = $stats['temp_min'] === null ? $temp : min($stats['temp_min'], $temp);
                     $stats['temp_max'] = $stats['temp_max'] === null ? $temp : max($stats['temp_max'], $temp);
@@ -284,19 +270,19 @@ final class StationController
                 $stats['count']++;
 
                 $features[] = [
-                    'id'             => $o->idEstacao,
-                    'name'           => $o->localEstacao,
-                    'lat'            => $o->latitude,
-                    'lng'            => $o->longitude,
-                    'temperature_c'  => $temp,
-                    'humidity_pct'   => $o->humidade,
-                    'pressure_hpa'   => $o->pressao,
-                    'precipitation_mm' => $o->precAcumulada,
-                    'radiation_wm2'  => $o->radiacao,
-                    'wind_speed_kmh' => $o->intensidadeVentoKM,
-                    'wind_dir_id'    => $o->idDireccVento,
-                    'wind_dir_code'  => StationWindDirection::code($o->idDireccVento),
-                    'wind_dir_label' => StationWindDirection::label($o->idDireccVento),
+                    'id'               => $station->id,
+                    'name'             => $station->name,
+                    'lat'              => $station->latitude,
+                    'lng'              => $station->longitude,
+                    'temperature_c'    => $temp,
+                    'humidity_pct'     => $obs?->humidityPct,
+                    'pressure_hpa'     => $obs?->pressureHpa,
+                    'precipitation_mm' => $obs?->precipitationMm,
+                    'radiation_wm2'    => $obs?->radiationWm2,
+                    'wind_speed_kmh'   => $obs?->windSpeedKmh,
+                    'wind_dir_id'      => $obs?->windDirectionId,
+                    'wind_dir_code'    => StationWindDirection::code($obs?->windDirectionId),
+                    'wind_dir_label'   => StationWindDirection::label($obs?->windDirectionId),
                 ];
             }
         } catch (IpmaApiException $e) {
