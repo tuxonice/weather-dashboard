@@ -305,7 +305,7 @@ station:
     map_heading: "Station map"
     map_subtitle: "Latest-hour temperature at every IPMA weather station."
     map_reported_at: "Reported at %datetime%."
-    map_count: "%count% stations."
+    map_count: "%count% stations (%active_count% active)."
     map_load_error: "Could not load the hourly station feed: "
     map_aria: "Map of IPMA weather stations"
     map_legend: "Temperature range: %min% °C → %max% °C. Markers are coloured by temperature (blue cold → red hot); grey markers mean no temperature reading was available."

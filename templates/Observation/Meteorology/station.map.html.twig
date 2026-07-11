@@ -46,7 +46,7 @@
                     <span class="ms-1">{{ 'station.map_reported_at'|trans({ '%datetime%': updated_at|date('Y-m-d H:i', timezone) }) }}</span>
                 {% endif %}
                 {% if stations_count %}
-                    <span class="ms-1">{{ 'station.map_count'|trans({ '%count%': stations_count }) }}</span>
+                    <span class="ms-1">{{ 'station.map_count'|trans({ '%count%': stations_count, '%active_count%': stations_active_count }) }}</span>
                 {% endif %}
             </p>
         </div>
