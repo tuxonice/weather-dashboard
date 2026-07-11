@@ -286,6 +286,7 @@ final class StationController
                     'wind_dir_id'      => $obs?->windDirectionId,
                     'wind_dir_code'    => StationWindDirection::code($obs?->windDirectionId),
                     'wind_dir_label'   => StationWindDirection::label($obs?->windDirectionId),
+                    'wind_dir_bearing' => $obs !== null ? StationWindDirection::bearing($obs->windDirectionId) : null,
                 ];
             }
         } catch (IpmaApiException $e) {
