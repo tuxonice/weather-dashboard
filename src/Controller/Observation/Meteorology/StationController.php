@@ -251,7 +251,7 @@ final class StationController
         $features = [];
         $error = null;
         $updatedAt = null;
-        $stats = ['temp_min' => null, 'temp_max' => null, 'count' => 0];
+        $stats = ['temp_min' => null, 'temp_max' => null, 'count' => 0, 'active_count' => 0];
 
         try {
             $stations = $this->stations->all();
@@ -268,6 +268,9 @@ final class StationController
                     $stats['temp_max'] = $stats['temp_max'] === null ? $temp : max($stats['temp_max'], $temp);
                 }
                 $stats['count']++;
+                if ($obs !== null) {
+                    $stats['active_count']++;
+                }
 
                 $features[] = [
                     'id'               => $station->id,
@@ -283,6 +286,7 @@ final class StationController
                     'wind_dir_id'      => $obs?->windDirectionId,
                     'wind_dir_code'    => StationWindDirection::code($obs?->windDirectionId),
                     'wind_dir_label'   => StationWindDirection::label($obs?->windDirectionId),
+                    'wind_dir_bearing' => $obs !== null ? StationWindDirection::bearing($obs->windDirectionId) : null,
                 ];
             }
         } catch (IpmaApiException $e) {
@@ -294,6 +298,7 @@ final class StationController
         $html = $this->twig->render('Observation/Meteorology/station.map.html.twig', [
             'stations_json' => json_encode($features, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
             'stations_count' => $stats['count'],
+            'stations_active_count' => $stats['active_count'],
             'temp_min' => $stats['temp_min'],
             'temp_max' => $stats['temp_max'],
             'updated_at' => $updatedAt?->setTimezone($tz),
