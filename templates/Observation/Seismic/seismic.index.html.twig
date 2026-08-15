@@ -169,6 +169,15 @@
 <script id="seismic-data" type="application/json">{{ features_json|raw }}</script>
 <script id="seismic-i18n" type="application/json">{{ {
     no_magnitude: 'seismic.no_magnitude'|trans,
+    labels: {
+        ('seismic.magnitude.unknown'): 'seismic.magnitude.unknown'|trans,
+        ('seismic.magnitude.micro'): 'seismic.magnitude.micro'|trans,
+        ('seismic.magnitude.minor'): 'seismic.magnitude.minor'|trans,
+        ('seismic.magnitude.light'): 'seismic.magnitude.light'|trans,
+        ('seismic.magnitude.moderate'): 'seismic.magnitude.moderate'|trans,
+        ('seismic.magnitude.strong'): 'seismic.magnitude.strong'|trans,
+        ('seismic.magnitude.major'): 'seismic.magnitude.major'|trans,
+    },
 }|json_encode|raw }}</script>
 <script>
     (function () {
@@ -207,8 +216,9 @@
             var magText = (f.magnitude == null)
                 ? i18n.no_magnitude
                 : ('M ' + f.magnitude.toFixed(1) + (f.mag_type ? ' (' + escapeHtml(f.mag_type) + ')' : ''));
+            var levelLabel = (i18n.labels && i18n.labels[f.level_label]) ? i18n.labels[f.level_label] : f.level_label;
             marker.bindPopup(
-                '<strong>' + escapeHtml(f.level_label) + '</strong>'
+                '<strong>' + escapeHtml(levelLabel) + '</strong>'
                 + '<div>' + magText + '</div>'
                 + '<div class="small text-body-secondary">' + escapeHtml(f.region) + '</div>'
                 + '<div class="small text-body-secondary">' + escapeHtml(f.time.replace('T', ' ')) + ' UTC · ' + f.depth + ' km</div>'
