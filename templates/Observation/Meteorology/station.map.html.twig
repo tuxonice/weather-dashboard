@@ -68,12 +68,17 @@
     {% else %}
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
             <span class="text-body-secondary small me-1"><i class="bi bi-layers me-1" aria-hidden="true"></i></span>
+            {# Six layers no longer fit a phone's width; scroll the group in its
+               own box rather than letting it widen the page body. #}
+            <div class="overflow-x-auto mw-100" style="min-width: 0;">
             <div class="btn-group btn-group-sm" role="group" id="layer-switcher" aria-label="{{ 'station.map_heading'|trans }}">
                 <button type="button" class="btn btn-primary"          data-layer="temperature"><i class="bi bi-thermometer-half me-1" aria-hidden="true"></i>{{ 'station.map_layer_temperature'|trans }}</button>
+                <button type="button" class="btn btn-outline-secondary" data-layer="apparent_temp"><i class="bi bi-thermometer-sun me-1" aria-hidden="true"></i>{{ 'station.map_layer_apparent_temp'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="humidity">   <i class="bi bi-droplet-half me-1"    aria-hidden="true"></i>{{ 'station.map_layer_humidity'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="wind">        <i class="bi bi-wind me-1"             aria-hidden="true"></i>{{ 'station.map_layer_wind'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="rain">        <i class="bi bi-cloud-rain me-1"       aria-hidden="true"></i>{{ 'station.map_layer_rain'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="pressure">    <i class="bi bi-speedometer2 me-1"     aria-hidden="true"></i>{{ 'station.map_layer_pressure'|trans }}</button>
+            </div>
             </div>
         </div>
 
@@ -91,6 +96,8 @@
 <script id="stations-data" type="application/json">{{ stations_json|raw }}</script>
 <script id="station-i18n" type="application/json">{{ {
     temperature:   'station.tile_temperature'|trans,
+    apparent_temp: 'station.col_apparent_temp'|trans,
+    apparent_assumed: 'station.apparent_wind_assumed'|trans,
     humidity:      'station.tile_humidity'|trans,
     pressure:      'station.tile_pressure'|trans,
     rain:          'station.col_rain'|trans,
@@ -142,21 +149,32 @@
             return lum < 0.45 ? '#fff' : '#000';
         }
 
+        // Shared by the measured- and apparent-temperature layers so the two
+        // are directly comparable when switching between them.
+        var TEMPERATURE_STOPS = [
+            { t:  0, c: [ 33, 102, 172] },
+            { t: 10, c: [ 67, 147, 195] },
+            { t: 15, c: [146, 197, 222] },
+            { t: 20, c: [254, 224, 139] },
+            { t: 25, c: [244, 165,  68] },
+            { t: 30, c: [215,  48,  39] },
+            { t: 35, c: [140,  10,  20] },
+        ];
+
         var LAYERS = {
             temperature: {
                 field: 'temperature_c',
                 unit: '°C',
                 decimals: 1,
                 labelFn: function (v) { return v === null ? null : Math.round(v) + '°'; },
-                stops: [
-                    { t:  0, c: [ 33, 102, 172] },
-                    { t: 10, c: [ 67, 147, 195] },
-                    { t: 15, c: [146, 197, 222] },
-                    { t: 20, c: [254, 224, 139] },
-                    { t: 25, c: [244, 165,  68] },
-                    { t: 30, c: [215,  48,  39] },
-                    { t: 35, c: [140,  10,  20] },
-                ],
+                stops: TEMPERATURE_STOPS,
+            },
+            apparent_temp: {
+                field: 'apparent_temperature_c',
+                unit: '°C',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + '°'; },
+                stops: TEMPERATURE_STOPS,
             },
             humidity: {
                 field: 'humidity_pct',
@@ -253,6 +271,11 @@
                 + '<div class="small text-body-secondary mb-2">#' + escapeHtml(s.id) + '</div>'
                 + '<dl class="small">'
                 +   '<dt>' + escapeHtml(i18n.temperature) + '</dt><dd>' + fmt(s.temperature_c, '°C', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.apparent_temp) + '</dt><dd>'
+                +     (s.apparent_wind_assumed
+                        ? '<em title="' + escapeHtml(i18n.apparent_assumed) + '">\u2248' + fmt(s.apparent_temperature_c, '°C', 1) + '</em>'
+                        : fmt(s.apparent_temperature_c, '°C', 1))
+                +     '</dd>'
                 +   '<dt>' + escapeHtml(i18n.humidity)    + '</dt><dd>' + fmt(s.humidity_pct,  '%', 0) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.pressure)    + '</dt><dd>' + fmt(s.pressure_hpa,  'hPa', 1) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.rain)        + '</dt><dd>' + fmt(s.precipitation_mm, 'mm', 1) + '</dd>'

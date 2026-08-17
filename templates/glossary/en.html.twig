@@ -293,6 +293,114 @@
         </div>
     </div>
 
+    {# Apparent Temperature #}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apparentTemperature" aria-expanded="false" aria-controls="apparentTemperature">
+                <i class="bi bi-thermometer-sun me-2" aria-hidden="true"></i>Apparent Temperature
+            </button>
+        </h2>
+        <div id="apparentTemperature" class="accordion-collapse collapse" data-bs-parent="#glossaryAccordion">
+            <div class="accordion-body">
+                <p class="small text-body-secondary mb-3">The &ldquo;feels like&rdquo; temperature shown next to station readings. It is computed locally from each station&rsquo;s observation, not supplied by the IPMA API.</p>
+                <p class="small text-body-secondary mb-3">It uses Steadman&rsquo;s apparent-temperature scale (Steadman 1984, refined 1994) in its simplified operational form &mdash; an approximation of his full model of heat balance in the human body.</p>
+                <p class="small text-body-secondary mb-3">The model represents <strong>an adult walking outdoors in the shade</strong>, so the result does not account for direct sunlight: a station in full sun will feel hotter than the value shown. A variant of the formula also takes solar radiation into account; it is not used here, because not every station reports radiation.</p>
+
+                <h6 class="mt-3 mb-2">Formula</h6>
+                <pre class="small bg-body-secondary p-3 rounded mb-2"><code>e  = (RH / 100) &times; 6.105 &times; exp(17.27 &times; T / (237.7 + T))
+
+AT = T + 0.33 &times; e &minus; 0.70 &times; v &minus; 4.00</code></pre>
+
+                <table class="table table-sm mb-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">Symbol</th>
+                            <th scope="col">Meaning</th>
+                            <th scope="col">Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="small"><code>T</code></td>
+                            <td class="small">Measured air temperature</td>
+                            <td class="small">&deg;C</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>RH</code></td>
+                            <td class="small">Relative humidity</td>
+                            <td class="small">%</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>e</code></td>
+                            <td class="small">Water-vapour pressure, derived from T and RH</td>
+                            <td class="small">hPa</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>v</code></td>
+                            <td class="small">Wind speed at 10&nbsp;m</td>
+                            <td class="small">m/s</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>AT</code></td>
+                            <td class="small">Apparent temperature</td>
+                            <td class="small">&deg;C</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3 mb-2">How humidity and wind pull it</h6>
+                <p class="small mb-2">Humidity raises the result, because moist air slows evaporative cooling from the skin. Wind lowers it, because moving air carries heat away. The two act independently, so they can cancel each other out entirely:</p>
+                <table class="table table-sm mb-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">Air temp.</th>
+                            <th scope="col">Humidity</th>
+                            <th scope="col">Wind</th>
+                            <th scope="col">Feels like</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">40 %</td>
+                            <td class="small">calm</td>
+                            <td class="small">25.2 &deg;C <span class="text-danger">+0.2</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">90 %</td>
+                            <td class="small">calm</td>
+                            <td class="small">30.4 &deg;C <span class="text-danger">+5.4</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">40 %</td>
+                            <td class="small">8 m/s</td>
+                            <td class="small">19.6 &deg;C <span class="text-primary">&minus;5.4</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">90 %</td>
+                            <td class="small">8 m/s</td>
+                            <td class="small">24.8 &deg;C <span class="text-primary">&minus;0.2</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3 mb-2">Why barometric pressure is not used</h6>
+                <p class="small mb-3">The <code>e</code> term is the <em>partial pressure of water vapour</em>, fixed by temperature and relative humidity alone. It is not the station&rsquo;s barometric pressure, which has no term in this formula &mdash; so a station&rsquo;s pressure reading never changes its apparent temperature.</p>
+
+                <h6 class="mt-3 mb-2">Missing readings</h6>
+                <ul class="small mb-0 ps-3">
+                    <li>Temperature and humidity are both required. Without either, no value is shown (<span class="text-body-secondary">&mdash;</span>).</li>
+                    <li>Where wind is unreported it is treated as calm and the value is marked <em>&asymp;</em>. Because the wind term is subtracted, such a value is an <strong>upper bound</strong> &mdash; the true figure is lower by 0.70 &times; the unreported speed in m/s.</li>
+                    <li>A wind speed measured as zero is real data, not an assumption, and is shown without the <em>&asymp;</em> marker.</li>
+                    <li>On the 24-hour trend chart, hours plotted from an assumed calm are drawn as hollow points.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     {# UV Index #}
     <div class="accordion-item">
         <h2 class="accordion-header">

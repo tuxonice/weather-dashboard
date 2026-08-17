@@ -60,6 +60,10 @@
                     <tr>
                         <th scope="col">{{ 'station.col_station'|trans }}</th>
                         <th scope="col" class="text-end">{{ 'station.col_temp'|trans }}</th>
+                        <th scope="col" class="text-end" title="{{ 'station.col_apparent_temp_hint'|trans }}">
+                            {{ 'station.col_apparent_temp'|trans }}
+                            <i class="bi bi-info-circle text-body-secondary small" aria-hidden="true"></i>
+                        </th>
                         <th scope="col" class="text-end">{{ 'station.col_humidity'|trans }}</th>
                         <th scope="col" class="text-end">{{ 'station.col_wind'|trans }}</th>
                         <th scope="col" class="text-center">{{ 'station.col_dir'|trans }}</th>
@@ -82,6 +86,28 @@
                             <td class="text-end">
                                 {% if row.temperature_c is not null %}
                                     <span class="fw-bold">{{ row.temperature_c|number_format(1) }} °C</span>
+                                {% else %}
+                                    <span class="text-body-secondary">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if row.apparent_temperature_c is not null %}
+                                    {% if row.apparent_wind_assumed %}
+                                        <span class="fst-italic" title="{{ 'station.apparent_wind_assumed'|trans }}">
+                                            ≈{{ row.apparent_temperature_c|number_format(1) }} °C
+                                        </span>
+                                    {% else %}
+                                        {{ row.apparent_temperature_c|number_format(1) }} °C
+                                    {% endif %}
+                                    {% if row.apparent_delta_c is not null %}
+                                        {% set delta = row.apparent_delta_c|round(1) %}
+                                        {# Warmer than measured reads red, cooler blue; an exact
+                                           match stays muted so it does not imply a direction. #}
+                                        <div class="small {{ delta > 0 ? 'text-danger' : (delta < 0 ? 'text-primary' : 'text-body-secondary') }}"
+                                             title="{{ 'station.apparent_delta_hint'|trans }}">
+                                            {{ delta > 0 ? '+' : (delta < 0 ? '−' : '') }}{{ (delta < 0 ? -delta : delta)|number_format(1) }}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-body-secondary">—</span>
                                 {% endif %}

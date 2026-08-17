@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Observation\Meteorology;
 
+use App\Service\Observation\Meteorology\ApparentTemperature;
 use App\Service\Observation\Meteorology\StationObservationRepository;
 use App\Service\Observation\Meteorology\StationRepository;
 use App\Service\Observation\Meteorology\StationWindDirection;
@@ -17,7 +18,7 @@ use Twig\Environment;
  * Weather-station browsing controller.
  *
  * - `index`: lists every station together with its latest observation
- *   (temperature, humidity, wind).
+ *   (temperature, apparent temperature, humidity, wind).
  * - `show`:  renders 24h of history for a single station.
  * - `map`:   plots every station's latest reading on a Leaflet map
  *            (same data source as the list: `observations.json` via the package).
@@ -46,10 +47,29 @@ final class StationController
             foreach ($stations as $station) {
                 $obs = $byStation[$station->id] ?? null;
 
+                // "Feels like" needs temperature and humidity; stations without
+                // an anemometer fall back to assuming calm, which the template
+                // marks as approximate.
+                $apparent = ApparentTemperature::estimateCelsius(
+                    $obs?->temperatureC,
+                    $obs?->humidityPct,
+                    $obs?->windSpeedMs,
+                );
+                $apparentAssumed = ApparentTemperature::windAssumedCalm(
+                    $obs?->temperatureC,
+                    $obs?->humidityPct,
+                    $obs?->windSpeedMs,
+                );
+
                 $rows[] = [
                     'station' => $station,
                     'has_data' => $obs !== null,
                     'temperature_c' => $obs?->temperatureC,
+                    'apparent_temperature_c' => $apparent,
+                    'apparent_wind_assumed' => $apparentAssumed,
+                    'apparent_delta_c' => $apparent !== null && $obs?->temperatureC !== null
+                        ? $apparent - $obs->temperatureC
+                        : null,
                     'humidity_pct' => $obs?->humidityPct,
                     'wind_speed_kmh' => $obs?->windSpeedKmh,
                     'wind_dir_code' => StationWindDirection::code($obs?->windDirectionId),
@@ -103,12 +123,24 @@ final class StationController
         try {
             foreach ($this->observations->historyForStationFull($id) as $entry) {
                 $obs = $entry['observation'];
+                $apparent = ApparentTemperature::estimateCelsius(
+                    $obs?->temperatureC,
+                    $obs?->humidityPct,
+                    $obs?->windSpeedMs,
+                );
+                $apparentAssumed = ApparentTemperature::windAssumedCalm(
+                    $obs?->temperatureC,
+                    $obs?->humidityPct,
+                    $obs?->windSpeedMs,
+                );
                 if ($obs !== null) {
                     $directionIds[] = $obs->windDirectionId;
                     $windSpeeds[] = $obs->windSpeedKmh;
                     $row = [
                         'at' => $entry['at'],
                         'temperature_c' => $obs->temperatureC,
+                        'apparent_temperature_c' => $apparent,
+                        'apparent_wind_assumed' => $apparentAssumed,
                         'humidity_pct' => $obs->humidityPct,
                         'pressure_hpa' => $obs->pressureHpa,
                         'precipitation_mm' => $obs->precipitationMm,
@@ -125,6 +157,8 @@ final class StationController
                 $fullSeries[] = [
                     'at' => $entry['at'],
                     'temperature_c' => $obs?->temperatureC,
+                    'apparent_temperature_c' => $apparent,
+                    'apparent_wind_assumed' => $apparentAssumed,
                     'humidity_pct' => $obs?->humidityPct,
                     'pressure_hpa' => $obs?->pressureHpa,
                     'wind_speed_kmh' => $obs?->windSpeedKmh,
@@ -162,7 +196,18 @@ final class StationController
         );
 
         $metricDefs = [
-            ['id' => 'temperature',   'field' => 'temperature_c',   'heading' => 'station.temp_trend_heading',         'icon' => 'bi-thermometer-half', 'unit' => '°C',   'color' => '220, 53, 69',   'decimals' => 1, 'zero' => false, 'chart_type' => 'line'],
+            // Measured and apparent temperature share one chart: same unit, so
+            // one y-axis, and the band between the lines is exactly the
+            // difference that humidity and wind account for.
+            ['id' => 'temperature',   'field' => 'temperature_c',   'heading' => 'station.temp_trend_heading',         'icon' => 'bi-thermometer-half', 'unit' => '°C',   'color' => '220, 53, 69',   'decimals' => 1, 'zero' => false, 'chart_type' => 'line',
+                'label' => 'station.tile_temperature',
+                'overlay' => [
+                    'field'         => 'apparent_temperature_c',
+                    'assumed_field' => 'apparent_wind_assumed',
+                    'label'         => 'station.col_apparent_temp',
+                    'color'         => '253, 126, 20',
+                ],
+            ],
             ['id' => 'humidity',      'field' => 'humidity_pct',    'heading' => 'station.humidity_trend_heading',     'icon' => 'bi-droplet-half',     'unit' => '%',    'color' => '13, 202, 240',  'decimals' => 0, 'zero' => false, 'chart_type' => 'line'],
             ['id' => 'pressure',      'field' => 'pressure_hpa',    'heading' => 'station.pressure_trend_heading',     'icon' => 'bi-speedometer',      'unit' => 'hPa',  'color' => '108, 117, 125', 'decimals' => 1, 'zero' => false, 'chart_type' => 'line'],
             ['id' => 'wind_speed',    'field' => 'wind_speed_kmh',  'heading' => 'station.wind_speed_heading',         'icon' => 'bi-wind',             'unit' => 'km/h', 'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true,  'chart_type' => 'line'],
@@ -221,6 +266,23 @@ final class StationController
             // The wind-speed chart draws each point as an arrow rotated to the
             // wind direction (bearing it blows *from*); calm/unknown hours have
             // a null bearing and fall back to a plain dot.
+            // A second line sharing the same axis. Dropped when it has no data
+            // at all, so the chart degrades to a single series rather than
+            // rendering an empty overlay. Hours plotted from an assumed calm
+            // are flagged so the chart can mark them.
+            if (isset($def['overlay'])) {
+                $overlayValues = array_column($fullSeries, $def['overlay']['field']);
+                if (array_filter($overlayValues, static fn($v): bool => $v !== null) !== []) {
+                    $chart['label'] = $def['label'];
+                    $chart['overlay'] = [
+                        'label'   => $def['overlay']['label'],
+                        'color'   => $def['overlay']['color'],
+                        'values'  => $overlayValues,
+                        'assumed' => array_column($fullSeries, $def['overlay']['assumed_field']),
+                    ];
+                }
+            }
+
             if ($def['id'] === 'wind_speed') {
                 $chart['bearings'] = array_column($fullSeries, 'wind_dir_bearing');
                 $chart['dir_codes'] = array_column($fullSeries, 'wind_dir_code');
@@ -278,6 +340,16 @@ final class StationController
                     'lat'              => $station->latitude,
                     'lng'              => $station->longitude,
                     'temperature_c'    => $temp,
+                    'apparent_temperature_c' => ApparentTemperature::estimateCelsius(
+                        $temp,
+                        $obs?->humidityPct,
+                        $obs?->windSpeedMs,
+                    ),
+                    'apparent_wind_assumed' => ApparentTemperature::windAssumedCalm(
+                        $temp,
+                        $obs?->humidityPct,
+                        $obs?->windSpeedMs,
+                    ),
                     'humidity_pct'     => $obs?->humidityPct,
                     'pressure_hpa'     => $obs?->pressureHpa,
                     'precipitation_mm' => $obs?->precipitationMm,
