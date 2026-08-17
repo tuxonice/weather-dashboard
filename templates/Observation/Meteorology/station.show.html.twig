@@ -53,6 +53,7 @@
                 <div class="row row-cols-2 row-cols-md-4 g-3">
                     {% set tiles = [
                         { icon: 'bi-thermometer-half', key: 'station.tile_temperature',  value: latest.temperature_c,    unit: '°C',   decimals: 1, color: 'danger' },
+                        { icon: 'bi-thermometer-sun',  key: 'station.tile_apparent_temperature', value: latest.apparent_temperature_c, unit: '°C', decimals: 1, color: 'danger', approx: latest.apparent_wind_assumed },
                         { icon: 'bi-droplet-half',     key: 'station.tile_humidity',     value: latest.humidity_pct,     unit: '%',    decimals: 0, color: 'info' },
                         { icon: 'bi-speedometer',      key: 'station.tile_pressure',     value: latest.pressure_hpa,     unit: 'hPa',  decimals: 1, color: 'secondary' },
                         { icon: 'bi-cloud-rain',       key: 'station.tile_precipitation',value: latest.precipitation_mm, unit: 'mm',   decimals: 1, color: 'primary' },
@@ -66,9 +67,11 @@
                                     <div class="small text-body-secondary">
                                         <i class="bi {{ tile.icon }} me-1" aria-hidden="true"></i>{{ tile.key|trans }}
                                     </div>
-                                    <div class="h5 mb-0">
+                                    <div class="h5 mb-0"{% if tile.approx|default(false) %} title="{{ 'station.apparent_wind_assumed'|trans }}"{% endif %}>
                                         {% if tile.value is not null %}
-                                            {{ tile.value|number_format(tile.decimals) }}
+                                            <span{% if tile.approx|default(false) %} class="fst-italic"{% endif %}>
+                                                {%- if tile.approx|default(false) %}≈{% endif %}{{ tile.value|number_format(tile.decimals) }}
+                                            </span>
                                             <span class="text-body-secondary small">{{ tile.unit }}</span>
                                         {% else %}
                                             <span class="text-body-secondary">—</span>
@@ -119,6 +122,9 @@
                             <tr>
                                 <th scope="col">{{ 'station.col_time'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_temp'|trans }}</th>
+                                <th scope="col" class="text-end" title="{{ 'station.col_apparent_temp_hint'|trans }}">
+                                    {{ 'station.col_apparent_temp'|trans }}
+                                </th>
                                 <th scope="col" class="text-end">{{ 'station.col_humidity'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_pressure'|trans }}</th>
                                 <th scope="col" class="text-end">{{ 'station.col_rain'|trans }}</th>
@@ -134,6 +140,19 @@
                                     <td class="text-end">
                                         {% if row.temperature_c is not null %}
                                             {{ row.temperature_c|number_format(1) }} °C
+                                        {% else %}
+                                            <span class="text-body-secondary">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if row.apparent_temperature_c is not null %}
+                                            {% if row.apparent_wind_assumed %}
+                                                <span class="fst-italic" title="{{ 'station.apparent_wind_assumed'|trans }}">
+                                                    ≈{{ row.apparent_temperature_c|number_format(1) }} °C
+                                                </span>
+                                            {% else %}
+                                                {{ row.apparent_temperature_c|number_format(1) }} °C
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-body-secondary">—</span>
                                         {% endif %}
@@ -201,7 +220,12 @@
                         </span>
                     {% endif %}
                 </h2>
-                <p class="text-body-secondary small mb-3">{{ 'station.trend_subtitle'|trans }}</p>
+                <p class="text-body-secondary small mb-3">
+                    {{ 'station.trend_subtitle'|trans }}
+                    {% if chart.overlay is defined and chart.overlay.assumed|filter(v => v) is not empty %}
+                        <span class="fst-italic">{{ 'station.apparent_wind_assumed_chart'|trans }}</span>
+                    {% endif %}
+                </p>
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div style="position: relative; height: 18rem;">
@@ -367,6 +391,8 @@
 <script id="trend-data" type="application/json">{{ {
     labels: trend_labels|map(d => d|date('H:i', timezone)),
     dirLabel: 'station.wind_dir_tooltip'|trans,
+    assumedNote: 'station.apparent_wind_assumed'|trans,
+    deltaLabel: 'station.apparent_delta_hint'|trans,
     charts: trend_charts|map(c => {
         id: c.id,
         unit: c.unit,
@@ -377,6 +403,13 @@
         values: c.values,
         bearings: c.bearings|default(null),
         dirCodes: c.dir_codes|default(null),
+        label: c.label is defined ? c.label|trans : null,
+        overlay: c.overlay is defined ? {
+            label:   c.overlay.label|trans,
+            color:   c.overlay.color,
+            values:  c.overlay.values,
+            assumed: c.overlay.assumed,
+        } : null,
     }),
 }|json_encode|raw }}</script>
 <script>
@@ -434,6 +467,45 @@
                 pointHoverRadius: 5,
             };
 
+            var datasets = [dataset];
+
+            // Second line on the same axis. The measured line drops its own
+            // fill so the only shaded region is the gap between the two,
+            // tinted by which line sits on top.
+            if (c.overlay) {
+                dataset.fill = false;
+                dataset.label = c.label;
+
+                var overlay = {
+                    data: c.overlay.values,
+                    label: c.overlay.label,
+                    borderColor: 'rgba(' + c.overlay.color + ', 0.95)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    fill: {
+                        target: '-1',
+                        above: 'rgba(220, 53, 69, 0.18)',
+                        below: 'rgba(13, 110, 253, 0.18)',
+                    },
+                };
+
+                // Hours plotted from an assumed calm are drawn hollow so they
+                // read as estimates rather than measurements.
+                if (c.overlay.assumed) {
+                    overlay.pointBackgroundColor = c.overlay.assumed.map(function (a) {
+                        return a ? '#fff' : 'rgba(' + c.overlay.color + ', 0.95)';
+                    });
+                    overlay.pointBorderColor = 'rgba(' + c.overlay.color + ', 0.95)';
+                    overlay.pointBorderWidth = c.overlay.assumed.map(function (a) { return a ? 2 : 1; });
+                    overlay.pointRadius = c.overlay.assumed.map(function (a) { return a ? 4 : 2; });
+                    overlay.pointHoverRadius = c.overlay.assumed.map(function (a) { return a ? 6 : 5; });
+                }
+
+                datasets.push(overlay);
+            }
+
             // Wind speed: render each point as a direction arrow. Calm/unknown
             // hours (null bearing) keep a plain dot.
             if (c.bearings) {
@@ -458,7 +530,7 @@
                 type: isBar ? 'bar' : 'line',
                 data: {
                     labels: data.labels,
-                    datasets: [dataset],
+                    datasets: datasets,
                 },
                 options: {
                     responsive: true,
@@ -474,21 +546,47 @@
                         },
                     },
                     plugins: {
-                        legend: { display: false },
+                        legend: { display: !!c.overlay, position: 'bottom', labels: { usePointStyle: true, boxHeight: 8 } },
                         tooltip: {
                             callbacks: {
                                 label: function (ctx) {
                                     if (ctx.parsed.y === null || ctx.parsed.y === undefined) {
                                         return undefined;
                                     }
-                                    return ctx.parsed.y.toFixed(c.decimals) + ' ' + c.unit;
+                                    var value = ctx.parsed.y.toFixed(c.decimals) + ' ' + c.unit;
+                                    return c.overlay ? ctx.dataset.label + ': ' + value : value;
                                 },
                                 afterLabel: function (ctx) {
-                                    if (!c.dirCodes) {
+                                    var notes = [];
+                                    if (c.dirCodes) {
+                                        var code = c.dirCodes[ctx.dataIndex];
+                                        if (code) {
+                                            notes.push(data.dirLabel + ': ' + code);
+                                        }
+                                    }
+                                    if (c.overlay && ctx.datasetIndex === 1
+                                        && c.overlay.assumed && c.overlay.assumed[ctx.dataIndex]) {
+                                        notes.push(data.assumedNote);
+                                    }
+                                    return notes.length ? notes : undefined;
+                                },
+                                // With two temperature lines the gap between
+                                // them is the point, so state it outright.
+                                footer: function (items) {
+                                    if (!c.overlay || items.length < 2) {
                                         return undefined;
                                     }
-                                    var code = c.dirCodes[ctx.dataIndex];
-                                    return code ? data.dirLabel + ': ' + code : undefined;
+                                    var measured = null, apparent = null;
+                                    items.forEach(function (i) {
+                                        if (i.datasetIndex === 0) { measured = i.parsed.y; }
+                                        if (i.datasetIndex === 1) { apparent = i.parsed.y; }
+                                    });
+                                    if (measured === null || apparent === null) {
+                                        return undefined;
+                                    }
+                                    var d = apparent - measured;
+                                    var sign = d > 0 ? '+' : (d < 0 ? '\u2212' : '');
+                                    return data.deltaLabel + ': ' + sign + Math.abs(d).toFixed(1) + ' ' + c.unit;
                                 },
                             },
                         },

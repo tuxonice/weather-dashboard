@@ -293,6 +293,114 @@
         </div>
     </div>
 
+    {# Apparent Temperature #}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apparentTemperature" aria-expanded="false" aria-controls="apparentTemperature">
+                <i class="bi bi-thermometer-sun me-2" aria-hidden="true"></i>Temperatura Aparente
+            </button>
+        </h2>
+        <div id="apparentTemperature" class="accordion-collapse collapse" data-bs-parent="#glossaryAccordion">
+            <div class="accordion-body">
+                <p class="small text-body-secondary mb-3">A temperatura &laquo;sentida&raquo; apresentada junto das leituras das esta&ccedil;&otilde;es. &Eacute; calculada localmente a partir da observa&ccedil;&atilde;o de cada esta&ccedil;&atilde;o, n&atilde;o sendo fornecida pela API IPMA.</p>
+                <p class="small text-body-secondary mb-3">Usa a escala de temperatura aparente de Steadman (Steadman 1984, revista em 1994) na sua forma operacional simplificada &mdash; uma aproxima&ccedil;&atilde;o do seu modelo completo de balan&ccedil;o t&eacute;rmico do corpo humano.</p>
+                <p class="small text-body-secondary mb-3">O modelo representa <strong>um adulto a caminhar ao ar livre, &agrave; sombra</strong>, pelo que o resultado n&atilde;o considera a exposi&ccedil;&atilde;o solar directa: uma esta&ccedil;&atilde;o ao sol ser&aacute; sentida como mais quente do que o valor apresentado. Existe uma variante da f&oacute;rmula que tamb&eacute;m tem em conta a radia&ccedil;&atilde;o solar; n&atilde;o &eacute; utilizada aqui porque nem todas as esta&ccedil;&otilde;es comunicam a radia&ccedil;&atilde;o.</p>
+
+                <h6 class="mt-3 mb-2">F&oacute;rmula</h6>
+                <pre class="small bg-body-secondary p-3 rounded mb-2"><code>e  = (RH / 100) &times; 6.105 &times; exp(17.27 &times; T / (237.7 + T))
+
+AT = T + 0.33 &times; e &minus; 0.70 &times; v &minus; 4.00</code></pre>
+
+                <table class="table table-sm mb-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">S&iacute;mbolo</th>
+                            <th scope="col">Significado</th>
+                            <th scope="col">Unidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="small"><code>T</code></td>
+                            <td class="small">Temperatura do ar medida</td>
+                            <td class="small">&deg;C</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>RH</code></td>
+                            <td class="small">Humidade relativa</td>
+                            <td class="small">%</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>e</code></td>
+                            <td class="small">Press&atilde;o de vapor de &aacute;gua, derivada de T e RH</td>
+                            <td class="small">hPa</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>v</code></td>
+                            <td class="small">Intensidade do vento a 10&nbsp;m</td>
+                            <td class="small">m/s</td>
+                        </tr>
+                        <tr>
+                            <td class="small"><code>AT</code></td>
+                            <td class="small">Temperatura aparente</td>
+                            <td class="small">&deg;C</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3 mb-2">Como a humidade e o vento a influenciam</h6>
+                <p class="small mb-2">A humidade aumenta o resultado, porque o ar h&uacute;mido reduz o arrefecimento por evapora&ccedil;&atilde;o na pele. O vento diminui-o, porque o ar em movimento transporta o calor. Os dois efeitos s&atilde;o independentes, pelo que se podem anular por completo:</p>
+                <table class="table table-sm mb-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">Temp. do ar</th>
+                            <th scope="col">Humidade</th>
+                            <th scope="col">Vento</th>
+                            <th scope="col">Sensa&ccedil;&atilde;o</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">40 %</td>
+                            <td class="small">sem vento</td>
+                            <td class="small">25.2 &deg;C <span class="text-danger">+0.2</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">90 %</td>
+                            <td class="small">sem vento</td>
+                            <td class="small">30.4 &deg;C <span class="text-danger">+5.4</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">40 %</td>
+                            <td class="small">8 m/s</td>
+                            <td class="small">19.6 &deg;C <span class="text-primary">&minus;5.4</span></td>
+                        </tr>
+                        <tr>
+                            <td class="small">25 &deg;C</td>
+                            <td class="small">90 %</td>
+                            <td class="small">8 m/s</td>
+                            <td class="small">24.8 &deg;C <span class="text-primary">&minus;0.2</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3 mb-2">Porque n&atilde;o se usa a press&atilde;o atmosf&eacute;rica</h6>
+                <p class="small mb-3">O termo <code>e</code> &eacute; a <em>press&atilde;o parcial do vapor de &aacute;gua</em>, determinada apenas pela temperatura e pela humidade relativa. N&atilde;o &eacute; a press&atilde;o atmosf&eacute;rica da esta&ccedil;&atilde;o, que n&atilde;o tem termo nesta f&oacute;rmula &mdash; pelo que a leitura de press&atilde;o de uma esta&ccedil;&atilde;o nunca altera a sua temperatura aparente.</p>
+
+                <h6 class="mt-3 mb-2">Leituras em falta</h6>
+                <ul class="small mb-0 ps-3">
+                    <li>A temperatura e a humidade s&atilde;o ambas necess&aacute;rias. Sem uma delas, n&atilde;o &eacute; apresentado qualquer valor (<span class="text-body-secondary">&mdash;</span>).</li>
+                    <li>Quando o vento n&atilde;o &eacute; indicado, assume-se ar calmo e o valor &eacute; marcado com <em>&asymp;</em>. Como o termo do vento &eacute; subtra&iacute;do, esse valor &eacute; um <strong>limite superior</strong> &mdash; o valor real &eacute; inferior em 0.70 &times; a intensidade n&atilde;o indicada em m/s.</li>
+                    <li>Uma intensidade do vento medida como zero &eacute; um dado real, n&atilde;o uma suposi&ccedil;&atilde;o, e &eacute; apresentada sem o marcador <em>&asymp;</em>.</li>
+                    <li>No gr&aacute;fico de tend&ecirc;ncia de 24 horas, as horas calculadas com ar calmo assumido s&atilde;o desenhadas como pontos vazados.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     {# UV Index #}
     <div class="accordion-item">
         <h2 class="accordion-header">
