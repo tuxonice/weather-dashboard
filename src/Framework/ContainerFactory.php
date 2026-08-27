@@ -132,19 +132,27 @@ final class ContainerFactory
         // not-yet-wrapped endpoint) still need the full connector.
         $cacheTtl = (int) ($_ENV['CACHE_TTL_SECONDS'] ?? $_SERVER['CACHE_TTL_SECONDS'] ?? 1800);
 
+        // IPMA_LOG_REQUESTS=0 turns off `var/log/ipma-requests.log`; a null
+        // path is what tells `IpmaConnectorFactory` to skip the decorator.
+        $logRequests = filter_var(
+            $_ENV['IPMA_LOG_REQUESTS'] ?? $_SERVER['IPMA_LOG_REQUESTS'] ?? true,
+            FILTER_VALIDATE_BOOL,
+        );
+        $requestLogFile = $logRequests ? $projectDir . '/var/log/ipma-requests.log' : null;
+
         $container->register(CacheInterface::class, CacheInterface::class)
             ->setFactory([IpmaConnectorFactory::class, 'createCache'])
             ->addArgument($projectDir . '/var/cache/ipma')
             ->addArgument($cacheTtl)
             ->addArgument($projectDir . '/var/log/ipma-cache.log')
-            ->addArgument($projectDir . '/var/log/ipma-requests.log');
+            ->addArgument($requestLogFile);
 
         $container->register(ApiConnectorInterface::class, ApiConnectorInterface::class)
             ->setFactory([IpmaConnectorFactory::class, 'create'])
             ->addArgument($projectDir . '/var/cache/ipma')
             ->addArgument($cacheTtl)
             ->addArgument($projectDir . '/var/log/ipma-cache.log')
-            ->addArgument($projectDir . '/var/log/ipma-requests.log');
+            ->addArgument($requestLogFile);
 
         $container->register(LocationRepository::class, LocationRepository::class)
             ->addArgument(new Reference(CacheInterface::class));

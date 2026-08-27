@@ -26,9 +26,10 @@ use Tlab\IpmaApi\ApiConnectorInterface;
  * connector for repositories that bypass those factories and hit the
  * endpoints via `fetchData()` / `fetchCsv()`.
  *
- * The cache is wrapped in a {@see LoggingCache} so that every request that
- * actually reaches IPMA (i.e. every cache miss the library then fills) is
- * recorded in `var/log/ipma-requests.log`.
+ * When `$requestLogFile` is given, the cache is wrapped in a
+ * {@see LoggingCache} so that every request that actually reaches IPMA
+ * (i.e. every cache miss the library then fills) is recorded there. Passing
+ * `null` — what `IPMA_LOG_REQUESTS=0` does — skips the decorator entirely.
  */
 final class IpmaConnectorFactory
 {
@@ -45,10 +46,13 @@ final class IpmaConnectorFactory
         );
         $adapter->setLogger(new FileLogger($logFile ?? $cacheDir . '/../log/ipma-cache.log'));
 
-        return new LoggingCache(
-            new Psr16Cache($adapter),
-            new FileLogger($requestLogFile ?? $cacheDir . '/../log/ipma-requests.log', 'ipma-api'),
-        );
+        $cache = new Psr16Cache($adapter);
+
+        if ($requestLogFile === null) {
+            return $cache;
+        }
+
+        return new LoggingCache($cache, new FileLogger($requestLogFile, 'ipma-api'));
     }
 
     public static function create(

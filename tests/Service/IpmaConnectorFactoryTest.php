@@ -58,6 +58,23 @@ final class IpmaConnectorFactoryTest extends TestCase
         self::assertSame(1, substr_count((string) file_get_contents($requestLog), 'FETCH'));
     }
 
+    public function testRequestLoggingIsOffWhenNoRequestLogFileIsConfigured(): void
+    {
+        $cache = IpmaConnectorFactory::createCache(
+            $this->workDir . '/cache',
+            60,
+            $this->workDir . '/log/ipma-cache.log',
+            null,
+        );
+
+        $key = 'ipma_api.' . hash('sha256', Endpoints::WEATHER_WARNINGS);
+        self::assertNull($cache->get($key));
+        $cache->set($key, ['warning'], 60);
+
+        self::assertSame(['warning'], $cache->get($key));
+        self::assertFileDoesNotExist($this->workDir . '/log/ipma-requests.log');
+    }
+
     private static function removeDirectory(string $dir): void
     {
         if (!is_dir($dir)) {

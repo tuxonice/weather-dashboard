@@ -22,7 +22,9 @@ There is no JS/CSS build step — Bootstrap 5 and Bootstrap Icons are loaded fro
 
 ## Cache
 
-`var/cache/ipma/` holds PSR-16 filesystem cache entries for IPMA API responses (1 h default TTL, see `IpmaConnectorFactory`). When upstream data looks stale or you need to retest a network failure path, delete that directory. `var/cache/twig/` is only populated in non-debug environments.
+`var/cache/ipma/` holds PSR-16 filesystem cache entries for IPMA API responses. When upstream data looks stale or you need to retest a network failure path, delete that directory. `var/cache/twig/` is only populated in non-debug environments.
+
+**Two TTLs are in play.** `CACHE_TTL_SECONDS` (`.env`, default 1800) travels from `ContainerFactory` into `IpmaConnectorFactory`, but only governs the three repositories built on the injected `ApiConnectorInterface` — `StationObservationRepository`, `StationHourlyRepository`, `OutlookRepository`. Every other repository calls `Ipma*::create*Api($this->cache)` without a TTL and therefore gets the library's own default of **3600 s**: `ApiConnector` passes an explicit TTL to every `set()`, and an explicit PSR-16 TTL overrides the `FilesystemAdapter`'s `defaultLifetime`. Changing `CACHE_TTL_SECONDS` alone will not shorten the forecast, warning or climate caches — those need the TTL threaded through each `create*Api()` call (or supported upstream).
 
 ## Logs
 
@@ -32,7 +34,7 @@ There is no JS/CSS build step — Bootstrap 5 and Bootstrap Icons are loaded fro
 [2026-08-27T10:38:41+00:00] [ipma-api] INFO: FETCH https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json (47.3 ms)
 ```
 
-Cache hits are silent, so the file also shows how well the cache is doing its job.
+Cache hits are silent, so the file also shows how well the cache is doing its job. `IPMA_LOG_REQUESTS=0` turns the file off: `ContainerFactory` then hands `IpmaConnectorFactory` a `null` path and the decorator is never applied.
 
 The seam is `App\Framework\LoggingCache`, a PSR-16 decorator applied in `IpmaConnectorFactory::createCache()`. The library builds its own HTTP client inside `Ipma*::create*Api()`, so the cache is the only place the app can observe: `ApiConnector` writes to it *only* after a successful fetch, which makes one `set()` on an `ipma_api.*` key exactly one request that left the container.
 
