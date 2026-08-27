@@ -10,12 +10,13 @@ use Stringable;
 /**
  * PSR-3 logger that appends every entry to a project-local log file.
  *
- * Attached to the IPMA cache adapter so that filesystem-write failures
- * (permission denied, disk full, …) surface in `var/log/ipma-cache.log`
- * instead of being swallowed silently. FPM's `catch_workers_output` is
- * off in this image, so writing through `error_log()` would be dropped.
+ * Used for the two IPMA channels: cache write failures (permission denied,
+ * disk full, …) in `var/log/ipma-cache.log`, and the upstream requests
+ * recorded by {@see LoggingCache} in `var/log/ipma-requests.log`. FPM's
+ * `catch_workers_output` is off in this image, so writing through
+ * `error_log()` would be dropped.
  */
-final class CacheErrorLogger extends AbstractLogger
+final class FileLogger extends AbstractLogger
 {
     public function __construct(
         private readonly string $logFile,

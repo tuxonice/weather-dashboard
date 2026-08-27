@@ -136,13 +136,15 @@ final class ContainerFactory
             ->setFactory([IpmaConnectorFactory::class, 'createCache'])
             ->addArgument($projectDir . '/var/cache/ipma')
             ->addArgument($cacheTtl)
-            ->addArgument($projectDir . '/var/log/ipma-cache.log');
+            ->addArgument($projectDir . '/var/log/ipma-cache.log')
+            ->addArgument($projectDir . '/var/log/ipma-requests.log');
 
         $container->register(ApiConnectorInterface::class, ApiConnectorInterface::class)
             ->setFactory([IpmaConnectorFactory::class, 'create'])
             ->addArgument($projectDir . '/var/cache/ipma')
             ->addArgument($cacheTtl)
-            ->addArgument($projectDir . '/var/log/ipma-cache.log');
+            ->addArgument($projectDir . '/var/log/ipma-cache.log')
+            ->addArgument($projectDir . '/var/log/ipma-requests.log');
 
         $container->register(LocationRepository::class, LocationRepository::class)
             ->addArgument(new Reference(CacheInterface::class));

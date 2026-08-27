@@ -24,6 +24,22 @@ There is no JS/CSS build step — Bootstrap 5 and Bootstrap Icons are loaded fro
 
 `var/cache/ipma/` holds PSR-16 filesystem cache entries for IPMA API responses (1 h default TTL, see `IpmaConnectorFactory`). When upstream data looks stale or you need to retest a network failure path, delete that directory. `var/cache/twig/` is only populated in non-debug environments.
 
+## Logs
+
+`var/log/ipma-requests.log` records every request that actually reached IPMA — one line per cache miss the library then filled, with the upstream round trip:
+
+```
+[2026-08-27T10:38:41+00:00] [ipma-api] INFO: FETCH https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json (47.3 ms)
+```
+
+Cache hits are silent, so the file also shows how well the cache is doing its job.
+
+The seam is `App\Framework\LoggingCache`, a PSR-16 decorator applied in `IpmaConnectorFactory::createCache()`. The library builds its own HTTP client inside `Ipma*::create*Api()`, so the cache is the only place the app can observe: `ApiConnector` writes to it *only* after a successful fetch, which makes one `set()` on an `ipma_api.*` key exactly one request that left the container.
+
+Cache keys are `ipma_api.` + `sha256(url)`, so `App\Framework\EndpointHashIndex` hashes every endpoint in `Tlab\IpmaApi\Endpoints` up front (expanding `{idDay}` / `{idArea}` from their enums) to log URLs rather than keys. The per-location forecast and the climate CSVs take open-ended identifiers and cannot be enumerated — those log the key; resolve one by hand with `php -r 'echo hash("sha256", "<url>");'`.
+
+`var/log/ipma-cache.log` is the other channel: cache *write* failures (permission denied, disk full). Both use `App\Framework\FileLogger`.
+
 ## Architecture
 
 This is **not a Symfony application** — it is a hand-wired micro-framework that composes individual Symfony components (`http-kernel`, `routing`, `dependency-injection`, `event-dispatcher`, `translation`, `twig-bridge`, `cache`). There is no `Symfony\Bundle\FrameworkBundle`, no `AbstractController`, no auto-configuration, and no attribute routing. Three files own the wiring:
