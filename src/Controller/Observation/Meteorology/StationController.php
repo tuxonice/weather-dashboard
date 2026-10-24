@@ -228,7 +228,7 @@ final class StationController
             ),
         ));
         $sunnyReadings = count(array_filter($radSeries, static fn(array $r): bool => $r['w'] > 0.0));
-        if (count($radSeries) === 24 && $sunnyReadings >= 5) {
+        if (count($radSeries) >= 20 && $sunnyReadings >= 5) {
             $totalWh = 0.0;
             for ($ri = 0; $ri < count($radSeries) - 1; $ri++) {
                 $deltaH = ($radSeries[$ri + 1]['at']->getTimestamp() - $radSeries[$ri]['at']->getTimestamp()) / 3600.0;
