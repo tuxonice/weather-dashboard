@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Observation\Meteorology;
 
 use App\Service\Observation\Meteorology\ApparentTemperature;
+use App\Service\Observation\Meteorology\RadiationEnergy;
 use App\Service\Observation\Meteorology\StationObservationRepository;
 use App\Service\Observation\Meteorology\StationRepository;
 use App\Service\Observation\Meteorology\StationWindDirection;
@@ -215,10 +216,6 @@ final class StationController
             ['id' => 'precipitation', 'field' => 'precipitation_mm','heading' => 'station.precipitation_trend_heading','icon' => 'bi-cloud-rain',       'unit' => 'mm',   'color' => '13, 110, 253',  'decimals' => 1, 'zero' => true,  'chart_type' => 'bar'],
         ];
 
-        // Integrate radiation over the day using the trapezoidal rule.
-        // Each interval between consecutive timestamps is (t[i+1] - t[i]) in hours.
-        // Energy (Wh/m²) = Σ (W[i] + W[i+1]) / 2 × Δh → divide by 1000 for kWh/m².
-        $radiationTotalKwhM2 = null;
         $radSeries = array_values(array_filter(
             array_map(
                 static fn(array $row): ?array => $row['radiation_wm2'] !== null
@@ -227,15 +224,7 @@ final class StationController
                 $fullSeries,
             ),
         ));
-        $sunnyReadings = count(array_filter($radSeries, static fn(array $r): bool => $r['w'] > 0.0));
-        if (count($radSeries) >= 20 && $sunnyReadings >= 5) {
-            $totalWh = 0.0;
-            for ($ri = 0; $ri < count($radSeries) - 1; $ri++) {
-                $deltaH = ($radSeries[$ri + 1]['at']->getTimestamp() - $radSeries[$ri]['at']->getTimestamp()) / 3600.0;
-                $totalWh += ($radSeries[$ri]['w'] + $radSeries[$ri + 1]['w']) / 2.0 * $deltaH;
-            }
-            $radiationTotalKwhM2 = $totalWh / 1000.0;
-        }
+        $radiationTotalKwhM2 = RadiationEnergy::kwhPerM2($radSeries);
 
         $trendCharts = [];
         foreach ($metricDefs as $def) {
@@ -331,6 +320,7 @@ final class StationController
             $stations = $this->stations->all();
             $latest = $this->observations->latestAll();
             $rain24h = $this->observations->precipitationTotals24h();
+            $radiation24h = $this->observations->radiationTotalsKwhM2();
             $updatedAt = $latest['at'];
             $byStation = $latest['observations'];
 
@@ -368,6 +358,7 @@ final class StationController
                     'precipitation_mm' => $obs?->precipitationMm,
                     'precipitation_24h_mm' => isset($rain24h[$station->id]) ? round($rain24h[$station->id], 1) : null,
                     'radiation_wm2'    => $obs?->radiationWm2,
+                    'radiation_24h_kwh_m2' => isset($radiation24h[$station->id]) ? round($radiation24h[$station->id], 2) : null,
                     'wind_speed_kmh'   => $obs?->windSpeedKmh,
                     'wind_dir_id'      => $obs?->windDirectionId,
                     'wind_dir_code'    => StationWindDirection::code($obs?->windDirectionId),

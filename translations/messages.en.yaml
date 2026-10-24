@@ -322,6 +322,7 @@ station:
     map_layer_wind: "Wind"
     map_layer_rain: "Rain"
     map_layer_rain_24h: "Rain 24h"
+    map_layer_radiation_24h: "Solar energy 24h"
     map_layer_pressure: "Pressure"
     map_layer_legend: "%min% – %max% %unit%. Grey = no reading."
     map_no_reading: "No reading"

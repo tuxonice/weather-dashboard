@@ -140,6 +140,39 @@ final class StationObservationRepository
     }
 
     /**
+     * Estimated daily solar energy (kWh/m²) per station over the 24h payload,
+     * see {@see RadiationEnergy}. Stations without enough data are omitted.
+     *
+     * @return array<int, float>
+     */
+    public function radiationTotalsKwhM2(): array
+    {
+        $series = [];
+
+        foreach ($this->timestampsAsc() as $label => $at) {
+            foreach ($this->rawForTimestamp($label) as $stationId => $raw) {
+                if (!is_array($raw)) {
+                    continue;
+                }
+                $w = StationObservation::fromArray($raw)->radiationWm2;
+                if ($w !== null) {
+                    $series[(int) $stationId][] = ['at' => $at, 'w' => $w];
+                }
+            }
+        }
+
+        $totals = [];
+        foreach ($series as $sid => $points) {
+            $kwh = RadiationEnergy::kwhPerM2($points);
+            if ($kwh !== null) {
+                $totals[$sid] = $kwh;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
      * Ordered history (oldest → newest) of observations for a single station.
      *
      * @return list<array{at: DateTimeImmutable, observation: StationObservation}>

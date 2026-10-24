@@ -322,6 +322,7 @@ station:
     map_layer_wind: "Vento"
     map_layer_rain: "Chuva"
     map_layer_rain_24h: "Chuva 24h"
+    map_layer_radiation_24h: "Energia solar 24h"
     map_layer_pressure: "Pressão"
     map_layer_legend: "%min% – %max% %unit%. Cinzento = sem leitura."
     map_no_reading: "Sem leitura"
