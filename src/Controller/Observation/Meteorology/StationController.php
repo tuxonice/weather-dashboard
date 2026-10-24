@@ -271,6 +271,10 @@ final class StationController
                 'values'     => $values,
             ];
 
+            if ($def['id'] === 'precipitation') {
+                $chart['total'] = array_sum(array_filter($values, static fn($v): bool => $v !== null));
+            }
+
             // The wind-speed chart draws each point as an arrow rotated to the
             // wind direction (bearing it blows *from*); calm/unknown hours have
             // a null bearing and fall back to a plain dot.
@@ -326,6 +330,7 @@ final class StationController
         try {
             $stations = $this->stations->all();
             $latest = $this->observations->latestAll();
+            $rain24h = $this->observations->precipitationTotals24h();
             $updatedAt = $latest['at'];
             $byStation = $latest['observations'];
 
@@ -361,6 +366,7 @@ final class StationController
                     'humidity_pct'     => $obs?->humidityPct,
                     'pressure_hpa'     => $obs?->pressureHpa,
                     'precipitation_mm' => $obs?->precipitationMm,
+                    'precipitation_24h_mm' => isset($rain24h[$station->id]) ? round($rain24h[$station->id], 1) : null,
                     'radiation_wm2'    => $obs?->radiationWm2,
                     'wind_speed_kmh'   => $obs?->windSpeedKmh,
                     'wind_dir_id'      => $obs?->windDirectionId,

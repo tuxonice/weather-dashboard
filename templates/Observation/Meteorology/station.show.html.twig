@@ -219,6 +219,12 @@
                             <span class="fw-lighter small">{{ 'station.radiation_daily_energy'|trans }}</span>
                         </span>
                     {% endif %}
+                    {% if chart.id == 'precipitation' and chart.total is not null %}
+                        <span class="ms-2 badge bg-primary-subtle text-primary-emphasis fw-normal fs-6">
+                            {{ chart.total|number_format(1) }} mm
+                            <span class="fw-lighter small">{{ 'station.precipitation_24h_total'|trans }}</span>
+                        </span>
+                    {% endif %}
                 </h2>
                 <p class="text-body-secondary small mb-3">
                     {{ 'station.trend_subtitle'|trans }}

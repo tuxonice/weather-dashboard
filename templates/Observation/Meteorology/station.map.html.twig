@@ -68,7 +68,7 @@
     {% else %}
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
             <span class="text-body-secondary small me-1"><i class="bi bi-layers me-1" aria-hidden="true"></i></span>
-            {# Six layers no longer fit a phone's width; scroll the group in its
+            {# Seven layers no longer fit a phone's width; scroll the group in its
                own box rather than letting it widen the page body. #}
             <div class="overflow-x-auto mw-100" style="min-width: 0;">
             <div class="btn-group btn-group-sm" role="group" id="layer-switcher" aria-label="{{ 'station.map_heading'|trans }}">
@@ -77,6 +77,7 @@
                 <button type="button" class="btn btn-outline-secondary" data-layer="humidity">   <i class="bi bi-droplet-half me-1"    aria-hidden="true"></i>{{ 'station.map_layer_humidity'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="wind">        <i class="bi bi-wind me-1"             aria-hidden="true"></i>{{ 'station.map_layer_wind'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="rain">        <i class="bi bi-cloud-rain me-1"       aria-hidden="true"></i>{{ 'station.map_layer_rain'|trans }}</button>
+                <button type="button" class="btn btn-outline-secondary" data-layer="rain_24h">    <i class="bi bi-cloud-rain-heavy me-1" aria-hidden="true"></i>{{ 'station.map_layer_rain_24h'|trans }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-layer="pressure">    <i class="bi bi-speedometer2 me-1"     aria-hidden="true"></i>{{ 'station.map_layer_pressure'|trans }}</button>
             </div>
             </div>
@@ -101,6 +102,7 @@
     humidity:      'station.tile_humidity'|trans,
     pressure:      'station.tile_pressure'|trans,
     rain:          'station.col_rain'|trans,
+    rain_24h:      'station.map_layer_rain_24h'|trans,
     wind:          'station.col_wind'|trans,
     open:          'common.open_details'|trans,
     station:       'station.col_station'|trans,
@@ -232,6 +234,19 @@
                     { t: 20,  c: [  2,  56, 88 ] },
                 ],
             },
+            rain_24h: {
+                field: 'precipitation_24h_mm',
+                unit: 'mm',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Number(v).toFixed(1); },
+                stops: [
+                    { t:  0,  c: [255, 255, 255] },
+                    { t:  5,  c: [179, 218, 241] },
+                    { t: 15,  c: [ 66, 146, 198] },
+                    { t: 30,  c: [  8,  81, 156] },
+                    { t: 60,  c: [  2,  56,  88] },
+                ],
+            },
             pressure: {
                 field: 'pressure_hpa',
                 unit: 'hPa',
@@ -279,6 +294,7 @@
                 +   '<dt>' + escapeHtml(i18n.humidity)    + '</dt><dd>' + fmt(s.humidity_pct,  '%', 0) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.pressure)    + '</dt><dd>' + fmt(s.pressure_hpa,  'hPa', 1) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.rain)        + '</dt><dd>' + fmt(s.precipitation_mm, 'mm', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.rain_24h)    + '</dt><dd>' + fmt(s.precipitation_24h_mm, 'mm', 1) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.wind)        + '</dt><dd>' + fmt(s.wind_speed_kmh, 'km/h', 1)
                 +     (s.wind_dir_code ? ' ' + escapeHtml(s.wind_dir_code) : '') + '</dd>'
                 + '</dl>'

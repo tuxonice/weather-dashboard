@@ -112,6 +112,34 @@ final class StationObservationRepository
     }
 
     /**
+     * Total precipitation (mm) per station summed over every timestamp in the
+     * 24h payload. Stations that never reported a precipitation value are
+     * omitted so callers can tell "no reading" apart from "0 mm".
+     *
+     * @return array<int, float>
+     */
+    public function precipitationTotals24h(): array
+    {
+        $totals = [];
+
+        foreach (array_keys($this->timestampsAsc()) as $label) {
+            foreach ($this->rawForTimestamp($label) as $stationId => $raw) {
+                if (!is_array($raw)) {
+                    continue;
+                }
+                $mm = StationObservation::fromArray($raw)->precipitationMm;
+                if ($mm === null) {
+                    continue;
+                }
+                $sid = (int) $stationId;
+                $totals[$sid] = ($totals[$sid] ?? 0.0) + $mm;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
      * Ordered history (oldest → newest) of observations for a single station.
      *
      * @return list<array{at: DateTimeImmutable, observation: StationObservation}>
