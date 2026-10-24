@@ -227,8 +227,8 @@ final class StationController
                 $fullSeries,
             ),
         ));
-        $zeroReadings = count(array_filter($radSeries, static fn(array $r): bool => $r['w'] == 0.0));
-        if (count($radSeries) === 24 && $zeroReadings < 12) {
+        $sunnyReadings = count(array_filter($radSeries, static fn(array $r): bool => $r['w'] > 0.0));
+        if (count($radSeries) === 24 && $sunnyReadings >= 5) {
             $totalWh = 0.0;
             for ($ri = 0; $ri < count($radSeries) - 1; $ri++) {
                 $deltaH = ($radSeries[$ri + 1]['at']->getTimestamp() - $radSeries[$ri]['at']->getTimestamp()) / 3600.0;
@@ -247,6 +247,14 @@ final class StationController
             if ($def['chart_type'] === 'bar') {
                 $hasRain = array_filter($values, static fn($v): bool => $v !== null && $v > 0.0) !== [];
                 if (!$hasRain) {
+                    continue;
+                }
+            }
+
+            // Radiation trend: only meaningful with at least 5 hourly non-zero readings.
+            if ($def['id'] === 'radiation') {
+                $sunnyHours = count(array_filter($values, static fn($v): bool => $v !== null && $v > 0.0));
+                if ($sunnyHours < 5) {
                     continue;
                 }
             }
