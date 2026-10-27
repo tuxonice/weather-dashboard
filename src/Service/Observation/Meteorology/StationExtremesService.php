@@ -107,4 +107,38 @@ final class StationExtremesService
 
         return ['hottest' => $hottest, 'coldest' => $coldest];
     }
+
+    /**
+     * Station with the most rain over the last 24 hours and the heaviest
+     * single hourly reading (with its time).
+     *
+     * @return array{
+     *   wettest: array{station: WeatherStation|null, precipitation_mm: float}|null,
+     *   peak:    array{station: WeatherStation|null, precipitation_mm: float, at: DateTimeImmutable}|null,
+     * }
+     */
+    public function getRain24h(): array
+    {
+        $raw = $this->observations->rainExtremes24h();
+        $tz  = new DateTimeZone('Europe/Lisbon');
+
+        $wettest = null;
+        if ($raw['wettest'] !== null) {
+            $wettest = [
+                'station'          => $this->stations->findById($raw['wettest']['station_id']),
+                'precipitation_mm' => $raw['wettest']['precipitation_mm'],
+            ];
+        }
+
+        $peak = null;
+        if ($raw['peak'] !== null) {
+            $peak = [
+                'station'          => $this->stations->findById($raw['peak']['station_id']),
+                'precipitation_mm' => $raw['peak']['precipitation_mm'],
+                'at'               => $raw['peak']['at']->setTimezone($tz),
+            ];
+        }
+
+        return ['wettest' => $wettest, 'peak' => $peak];
+    }
 }

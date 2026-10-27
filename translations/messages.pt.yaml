@@ -136,6 +136,11 @@ home:
         coldest: "Mais frio"
         all_stations: "Todas as estações"
         no_data: "Dados das estações indisponíveis"
+    rain:
+        title_24h: "Chuva (últimas 24h)"
+        wettest: "Mais chuva (total 24h)"
+        peak: "Hora mais intensa"
+        none: "Sem chuva registada nas últimas 24h"
 
 location:
     title: "Localidades · Painel Meteorológico"

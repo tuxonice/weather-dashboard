@@ -140,6 +140,48 @@ final class StationObservationRepository
     }
 
     /**
+     * Single pass over the 24h payload returning the station with the highest
+     * accumulated precipitation and the single highest hourly reading.
+     * Both are null when no station reported any precipitation.
+     *
+     * @return array{
+     *   wettest: array{station_id: int, precipitation_mm: float}|null,
+     *   peak:    array{station_id: int, precipitation_mm: float, at: DateTimeImmutable}|null,
+     * }
+     */
+    public function rainExtremes24h(): array
+    {
+        $totals = [];
+        $peak = null;
+
+        foreach ($this->timestampsAsc() as $label => $at) {
+            foreach ($this->rawForTimestamp($label) as $stationId => $raw) {
+                if (!is_array($raw)) {
+                    continue;
+                }
+                $mm = StationObservation::fromArray($raw)->precipitationMm;
+                if ($mm === null || $mm <= 0.0) {
+                    continue;
+                }
+                $sid = (int) $stationId;
+                $totals[$sid] = ($totals[$sid] ?? 0.0) + $mm;
+
+                if ($peak === null || $mm > $peak['precipitation_mm']) {
+                    $peak = ['station_id' => $sid, 'precipitation_mm' => $mm, 'at' => $at];
+                }
+            }
+        }
+
+        $wettest = null;
+        if ($totals !== []) {
+            arsort($totals);
+            $wettest = ['station_id' => array_key_first($totals), 'precipitation_mm' => reset($totals)];
+        }
+
+        return ['wettest' => $wettest, 'peak' => $peak];
+    }
+
+    /**
      * Estimated daily solar energy (kWh/m²) per station over the 24h payload,
      * see {@see RadiationEnergy}. Stations without enough data are omitted.
      *

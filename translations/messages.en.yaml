@@ -136,6 +136,11 @@ home:
         coldest: "Coldest"
         all_stations: "All stations"
         no_data: "Station data unavailable"
+    rain:
+        title_24h: "Rain (last 24h)"
+        wettest: "Most rain (24h total)"
+        peak: "Heaviest hour"
+        none: "No rain recorded in the last 24h"
 
 location:
     title: "Locations · Weather Dashboard"

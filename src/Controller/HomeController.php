@@ -28,9 +28,11 @@ final class HomeController
     {
         $extremes = null;
         $extremes24h = null;
+        $rain24h = null;
         try {
             $extremes    = $this->extremes->get();
             $extremes24h = $this->extremes->get24h();
+            $rain24h     = $this->extremes->getRain24h();
         } catch (\Throwable) {
             // Non-critical — home page renders without the panels on API failure.
         }
@@ -39,6 +41,7 @@ final class HomeController
             'title'       => 'IPMA Dashboard',
             'extremes'    => $extremes,
             'extremes24h' => $extremes24h,
+            'rain24h'     => $rain24h,
         ]);
 
         return new Response($html);

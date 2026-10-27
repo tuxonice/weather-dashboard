@@ -157,6 +157,67 @@
     </div>
     {% endif %}
 
+    {% if rain24h is not null %}
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <h2 class="h6 mb-0 fw-semibold text-body-secondary text-uppercase tracking-wide">
+                    <i class="bi bi-cloud-rain me-1" aria-hidden="true"></i>{{ 'home.rain.title_24h'|trans }}
+                </h2>
+            </div>
+
+            {% if rain24h.wettest is null and rain24h.peak is null %}
+                <p class="text-body-secondary small mb-0">{{ 'home.rain.none'|trans }}</p>
+            {% else %}
+                <div class="row g-3">
+                    {% if rain24h.wettest is not null %}
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="display-6 fw-bold text-primary lh-1">
+                                {{ rain24h.wettest.precipitation_mm|number_format(1) }}<small class="fs-5 fw-normal"> mm</small>
+                            </span>
+                            <div>
+                                <div class="small fw-semibold text-primary">
+                                    <i class="bi bi-droplet-fill me-1" aria-hidden="true"></i>{{ 'home.rain.wettest'|trans }}
+                                </div>
+                                {% if rain24h.wettest.station %}
+                                    <a href="{{ path('stations_show', {id: rain24h.wettest.station.id}) }}"
+                                       class="small text-body-secondary text-decoration-none link-underline-hover">
+                                        {{ rain24h.wettest.station.name }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if rain24h.peak is not null %}
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="display-6 fw-bold text-info lh-1">
+                                {{ rain24h.peak.precipitation_mm|number_format(1) }}<small class="fs-5 fw-normal"> mm</small>
+                            </span>
+                            <div>
+                                <div class="small fw-semibold text-info">
+                                    <i class="bi bi-lightning-fill me-1" aria-hidden="true"></i>{{ 'home.rain.peak'|trans }}
+                                </div>
+                                {% if rain24h.peak.station %}
+                                    <a href="{{ path('stations_show', {id: rain24h.peak.station.id}) }}"
+                                       class="small text-body-secondary text-decoration-none link-underline-hover">
+                                        {{ rain24h.peak.station.name }}
+                                    </a>
+                                {% endif %}
+                                <div class="small text-body-tertiary">{{ rain24h.peak.at|date('H:i', false) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <div class="col-md-4">
             <a href="{{ path('locations_index') }}"
