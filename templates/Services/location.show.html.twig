@@ -163,20 +163,20 @@
                     <div class="card-body p-0">
                         <dl class="row g-0 mb-0 px-3 pt-3 small">
                             {%- set sun_rows = [
+                                ['bi-moon-fill',              'nadir',           nadir],
                                 ['bi-brightness-alt-high',    'night_end',       night_end],
                                 ['bi-cloud-sun',              'nautical_dawn',   nautical_dawn],
                                 ['bi-sunrise',                'dawn',            dawn],
-                                ['bi-brightness-high',        'golden_hour_end', golden_hour_end],
                                 ['bi-sunrise-fill',           'sunrise',         sunrise],
                                 ['bi-sun',                    'sunrise_end',     sunrise_end],
+                                ['bi-brightness-high',        'golden_hour_end', golden_hour_end],
                                 ['bi-sun-fill',               'solar_noon',      solar_noon],
+                                ['bi-brightness-high',        'golden_hour',     golden_hour],
                                 ['bi-sun',                    'sunset_start',    sunset_start],
                                 ['bi-sunset-fill',            'sunset',          sunset],
-                                ['bi-brightness-high',        'golden_hour',     golden_hour],
                                 ['bi-sunset',                 'dusk',            dusk],
                                 ['bi-cloud-moon',             'nautical_dusk',   nautical_dusk],
                                 ['bi-moon-stars',             'night',           night],
-                                ['bi-moon-fill',              'nadir',           nadir],
                             ] -%}
                             {% for row in sun_rows %}
                                 <dt class="col-6 col-sm-7 col-md-7 col-lg-7 pb-2">
