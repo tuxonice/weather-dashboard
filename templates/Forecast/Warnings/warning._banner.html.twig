@@ -1,37 +1,184 @@
-{# Reusable warnings banner used on the location detail page.
+{# Warnings panel used on the location detail page: summary, 3-day timeline per phenomenon, detail cards.
 
    Expects:
-   - area_warnings: list of { warning: WeatherWarning, level: { label, color, icon } }
+   - area_warnings: list of { warning: WeatherWarning, level: { label, color, icon, severity }, timezone }
+     (already sorted by severity, descending)
 #}
 {% if area_warnings is not empty %}
-    <div class="mb-4">
-        {% set highest = area_warnings|first.level %}
-        <div class="alert alert-danger d-flex align-items-start gap-3" role="alert">
-            <i class="bi {{ highest.icon }} fs-3 flex-shrink-0" aria-hidden="true"></i>
-            <div class="flex-grow-1">
-                <h2 class="h6 mb-2">
-                    {{ (area_warnings|length == 1 ? 'warning.banner_heading_one' : 'warning.banner_heading_many')|trans({ '%count%': area_warnings|length }) }}
-                </h2>
-                <ul class="list-unstyled mb-0 small">
-                    {% for item in area_warnings %}
-                        <li class="d-flex flex-wrap gap-2 mb-1">
-                            <span class="badge text-bg-{{ item.level.color }}">
-                                <i class="bi {{ item.level.icon }} me-1" aria-hidden="true"></i>
-                                {{ item.level.label|trans }}
-                            </span>
-                            <span class="fw-semibold">{{ item.warning.awarenessTypeName }}</span>
-                            <span class="text-body-secondary">
-                                {{ ('common.weekday_short.' ~ item.warning.startTime|date('N', item.timezone))|trans }}, {{ item.warning.startTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.startTime|date('n', item.timezone))|trans }} {{ item.warning.startTime|date('H:i', item.timezone) }}
-                                &rarr;
-                                {{ ('common.weekday_short.' ~ item.warning.endTime|date('N', item.timezone))|trans }}, {{ item.warning.endTime|date('j', item.timezone) }} {{ ('common.month_short.' ~ item.warning.endTime|date('n', item.timezone))|trans }} {{ item.warning.endTime|date('H:i', item.timezone) }}
-                            </span>
-                            {% if item.warning.text %}
-                                <span class="w-100">{{ item.warning.text }}</span>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ul>
+    {% set tz = (area_warnings|first).timezone %}
+    {% set highest = area_warnings|first %}
+    {% set base = 'today'|date('U', tz) %}
+    {% set span = 72 * 3600 %}
+    {% set types = [] %}
+    {% for item in area_warnings %}
+        {% if item.warning.awarenessTypeName not in types %}{% set types = types|merge([item.warning.awarenessTypeName]) %}{% endif %}
+    {% endfor %}
+
+    <style>
+        .wx{--wx-yellow:#f0c73c;--wx-orange:#f38b35;--wx-red:#d9363e;--wx-ok:#d7f3e2}
+        .wx-pill{display:inline-flex;align-items:center;gap:.4rem;border-radius:100px;padding:.3rem .7rem;font-size:.75rem;font-weight:800;white-space:nowrap}
+        .wx-pill.yellow{background:#fff6cf;color:#7e5b00}.wx-pill.orange{background:#fff0e1;color:#a94709}.wx-pill.red{background:#fde3e4;color:#9b1c22}
+        .wx-scroll{overflow-x:auto;padding-bottom:.4rem}
+        .wx-timeline{min-width:560px}
+        .wx-days,.wx-row{display:grid;grid-template-columns:105px 1fr;align-items:center}
+        .wx-days{margin-bottom:.6rem}
+        .wx-days div{display:grid;grid-template-columns:repeat(3,1fr)}
+        .wx-days span{text-align:center;background:var(--bs-tertiary-bg);border-right:2px solid var(--bs-body-bg);padding:.5rem;font-size:.78rem;font-weight:800;color:var(--bs-secondary-color)}
+        .wx-row{margin:.6rem 0}
+        .wx-type{font-size:.82rem;font-weight:700}
+        .wx-track{height:30px;background:var(--wx-ok);position:relative;border-radius:7px;overflow:hidden}
+        .wx-track:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(to right,transparent calc(33.333% - 1px),#fff 33.333%,transparent calc(33.333% + 1px),transparent calc(66.666% - 1px),#fff 66.666%,transparent calc(66.666% + 1px))}
+        .wx-now{position:absolute;top:0;bottom:0;width:2px;background:#172437;z-index:4;pointer-events:none}
+        .wx-seg{position:absolute;top:0;bottom:0;border:0;padding:0;cursor:pointer;transition:filter .15s}
+        .wx-seg.yellow{background:var(--wx-yellow)}.wx-seg.orange{background:var(--wx-orange)}.wx-seg.red{background:var(--wx-red)}
+        .wx-seg:hover,.wx-seg:focus-visible{filter:brightness(.92);outline:2px solid #1e3f63;outline-offset:-2px;z-index:3}
+        .wx-timeline.has-selection .wx-seg:not(.active){opacity:.35}
+        .wx-seg.active{z-index:3;outline:none;box-shadow:inset 0 0 0 3px #172437,inset 0 0 0 5px #fff}
+        .wx-legend{display:flex;gap:1rem;flex-wrap:wrap;margin:.8rem 0 0 105px;font-size:.73rem;color:var(--bs-secondary-color)}
+        .wx-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:.35rem}
+        .wx-cards{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;max-width:560px}
+        .wx-card{display:none;border:1px solid var(--bs-border-color);border-top:5px solid var(--wx-yellow);border-radius:1rem;padding:1.1rem;scroll-margin:25px;transition:box-shadow .2s,transform .2s}
+        .wx-card.orange{border-top-color:var(--wx-orange)}.wx-card.red{border-top-color:var(--wx-red)}
+        .wx-card.selected{display:block;box-shadow:0 0 0 3px #375e90aa,0 12px 25px #203e6217;transform:translateY(-2px)}
+        .wx-icon{width:37px;height:37px;border-radius:11px;background:var(--bs-tertiary-bg);display:grid;place-items:center;font-size:1.15rem}
+        .wx-date{padding:.7rem;background:var(--bs-tertiary-bg);border-radius:.75rem}
+        .wx-date .lbl{font-size:.65rem;letter-spacing:.08em;font-weight:800;color:var(--bs-secondary-color)}
+        .wx-date .time{display:block;font-size:1.7rem;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1.2}
+        @media(max-width:720px){.wx-legend{margin-left:0}.wx-days,.wx-row{grid-template-columns:90px 1fr}}
+        @media(prefers-reduced-motion:reduce){.wx *{transition:none!important}}
+    </style>
+
+    <section class="card mb-4 wx" aria-labelledby="loc-warnings-heading">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                <div>
+                    <h2 class="h5 mb-1" id="loc-warnings-heading">{{ 'warning.panel_heading'|trans }}</h2>
+                    <p class="small text-body-secondary mb-0">{{ 'warning.panel_sub'|trans }}</p>
+                </div>
+                <span class="wx-pill {{ highest.warning.awarenessLevelID|lower }}">● {{ 'warning.max_level'|trans }}: {{ highest.level.label|trans }}</span>
             </div>
+
+            <h3 class="h6 mb-1">{{ 'warning.timeline_title'|trans }}</h3>
+            <p class="small text-body-secondary mb-3">{{ 'warning.timeline_sub'|trans }}</p>
+            <div class="wx-scroll">
+                <div class="wx-timeline">
+                    <div class="wx-days">
+                        <span></span>
+                        <div>
+                            {% for d in 0..2 %}
+                                {% set ts = base + d * 86400 %}
+                                <span>{{ ('common.weekday_short.' ~ ts|date('N', tz))|trans|upper }} · {{ ts|date('j', tz) }} {{ ('common.month_short.' ~ ts|date('n', tz))|trans|upper }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% set nowTs = 'now'|date('U') %}
+                    {% for type in types %}
+                        <div class="wx-row">
+                            <div class="wx-type">{{ type }}</div>
+                            <div class="wx-track" role="group" aria-label="{{ type }}">
+                                {% if nowTs >= base and nowTs <= base + span %}
+                                    <span class="wx-now" style="left:{{ ((nowTs - base) / span * 100)|round(2) }}%" title="{{ 'warning.now'|trans }}"></span>
+                                {% endif %}
+                                {% for item in area_warnings %}{% if item.warning.awarenessTypeName == type %}
+                                    {% set from = max(base, item.warning.startTime|date('U')) %}
+                                    {% set to = min(base + span, item.warning.endTime|date('U')) %}
+                                    {% if to > from %}
+                                        <button type="button" class="wx-seg {{ item.warning.awarenessLevelID|lower }}"
+                                                style="left:{{ ((from - base) / span * 100)|round(3) }}%;width:{{ ((to - from) / span * 100)|round(3) }}%"
+                                                data-wx-target="wx-card-{{ loop.index }}"
+                                                title="{{ item.warning.startTime|date('H:i', tz) }} – {{ item.warning.endTime|date('H:i', tz) }}"
+                                                aria-label="{{ 'warning.highlight'|trans }}: {{ type }}, {{ item.level.label|trans }}"></button>
+                                    {% endif %}
+                                {% endif %}{% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="wx-legend">
+                        <span><i style="background:var(--wx-ok)"></i>{{ 'warning.legend_none'|trans }}</span>
+                        <span><i style="background:var(--wx-yellow)"></i>{{ 'awareness.level.yellow'|trans }}</span>
+                        <span><i style="background:var(--wx-orange)"></i>{{ 'awareness.level.orange'|trans }}</span>
+                        <span><i style="background:var(--wx-red)"></i>{{ 'awareness.level.red'|trans }}</span>
+                        <span><i style="background:#172437"></i>{{ 'warning.now'|trans }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <div id="wx-details-head" class="d-flex justify-content-between align-items-center mb-3" hidden>
+                <h3 class="h6 mb-0">{{ 'warning.details_title'|trans }}</h3>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="wx-clear" hidden>{{ 'warning.clear_selection'|trans }} ×</button>
+            </div>
+            <p id="wx-hint" class="small text-body-secondary mb-0"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>{{ 'warning.details_hint'|trans }}</p>
+            <div class="wx-cards">
+                {% for item in area_warnings %}
+                    {% set w = item.warning %}
+                    {% set lv = w.awarenessLevelID|lower %}
+                    {% set tname = w.awarenessTypeName|lower %}
+                    {% if tname matches '/mar[ií]tim|mar$/' %}{% set ic = 'bi-water' %}
+                    {% elseif tname matches '/precip|chuva/' %}{% set ic = 'bi-cloud-rain-heavy' %}
+                    {% elseif tname matches '/vento/' %}{% set ic = 'bi-wind' %}
+                    {% elseif tname matches '/trovoad/' %}{% set ic = 'bi-lightning' %}
+                    {% elseif tname matches '/quente|calor/' %}{% set ic = 'bi-thermometer-sun' %}
+                    {% elseif tname matches '/frio/' %}{% set ic = 'bi-thermometer-snow' %}
+                    {% elseif tname matches '/nevoeiro/' %}{% set ic = 'bi-cloud-fog2' %}
+                    {% elseif tname matches '/neve/' %}{% set ic = 'bi-snow' %}
+                    {% else %}{% set ic = 'bi-exclamation-triangle' %}{% endif %}
+                    <article class="wx-card {{ lv }}" id="wx-card-{{ loop.index }}" tabindex="-1">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="d-flex align-items-center gap-2 fw-bold">
+                                <span class="wx-icon" aria-hidden="true"><i class="bi {{ ic }}"></i></span>{{ w.awarenessTypeName }}
+                            </div>
+                            <span class="wx-pill {{ lv }}">{{ item.level.label|trans }}</span>
+                        </div>
+                        <p class="small text-body-secondary my-3">{{ w.text ?: '—' }}</p>
+                        <div class="row g-2">
+                            {% for pair in [['warning.start_label', w.startTime], ['warning.end_label', w.endTime]] %}
+                                <div class="col-6"><div class="wx-date">
+                                    <span class="lbl">{{ pair[0]|trans|upper }}</span>
+                                    <strong class="time">{{ pair[1]|date('H:i', tz) }}</strong>
+                                    <div class="small fw-semibold">{{ pair[1]|date('j', tz) }} {{ ('common.month_short.' ~ pair[1]|date('n', tz))|trans }}</div>
+                                    <div class="small text-body-secondary">{{ ('common.weekday_short.' ~ pair[1]|date('N', tz))|trans }}</div>
+                                </div></div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 small text-body-secondary">
+                            <span><i class="bi bi-clock me-1" aria-hidden="true"></i>{{ 'warning.duration'|trans({ '%hours%': ((w.endTime|date('U') - w.startTime|date('U')) / 3600)|round }) }}</span>
+                            {% if w.startTime|date('U') > nowTs %}
+                                <span class="badge text-bg-secondary rounded-pill">{{ 'warning.status_upcoming'|trans }}</span>
+                            {% elseif w.endTime|date('U') > nowTs %}
+                                <span class="badge text-bg-dark rounded-pill"><i class="bi bi-broadcast me-1" aria-hidden="true"></i>{{ 'warning.status_active'|trans }}</span>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <p class="small text-body-secondary mt-4 mb-0">
+                <a href="{{ path('warnings_index') }}">{{ 'warning.banner_see_all'|trans }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+            </p>
         </div>
-    </div>
+    </section>
+
+    <script>
+    (function () {
+        var timeline = document.querySelector('.wx-timeline'), clear = document.getElementById('wx-clear'), head = document.getElementById('wx-details-head'), hint = document.getElementById('wx-hint');
+        function reset() {
+            document.querySelectorAll('.wx-card.selected,.wx-seg.active').forEach(function (e) { e.classList.remove('selected', 'active'); });
+            timeline.classList.remove('has-selection');
+            head.hidden = true; hint.hidden = false;
+        }
+        document.querySelectorAll('.wx-seg').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var wasActive = b.classList.contains('active');
+                reset();
+                if (wasActive) return;
+                var card = document.getElementById(b.dataset.wxTarget);
+                if (!card) return;
+                card.classList.add('selected'); b.classList.add('active'); timeline.classList.add('has-selection'); head.hidden = false; hint.hidden = true;
+                card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+            });
+        });
+        clear.addEventListener('click', reset);
+    })();
+    </script>
 {% endif %}
