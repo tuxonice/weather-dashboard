@@ -213,7 +213,7 @@
                              + '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg></div>';
                     }
                     var arrowSvg = (bearing !== null && bearing !== undefined)
-                        ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="transform:rotate(' + bearing + 'deg);display:block;flex-shrink:0;">'
+                        ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="transform:rotate(' + (bearing + 180) + 'deg);display:block;flex-shrink:0;">'
                           + '<path d="M8 1l2.5 10.5L8 10l-2.5 2.5z"/>'
                           + '</svg>'
                         : '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="display:block;flex-shrink:0;"><circle cx="8" cy="8" r="3"/></svg>';
