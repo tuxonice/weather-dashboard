@@ -51,7 +51,7 @@ The app sets no cookies, has no analytics, accounts, forms or geolocation. The m
 - [ ] Apply the headers to the production Apache vhost (operator action)
 - [ ] Verify with `curl -sI https://meteo.tlab.pt/pt`
 - [x] Decide on a Content-Security-Policy: strict policy enforced now (`script-src 'self'`, `style-src 'self'`). Implemented in `src/Framework/SecurityHeadersSubscriber.php`. All inline scripts and styles moved to `public/js/pages/` and `public/css/pages/`; styles use `data-style` plus `public/js/pages/inline-styles.js`. Verified: 400 pages crawled with no inline code left, the browser blocks injected inline scripts, and the map, chart, SVG and console checks pass.
-- [ ] Still to check on the live site after deploy: the CSP header is sent, and no CSP violations appear in the browser console
+- [x] Live site after deploy (checked 2026-11-14): the CSP header is sent by the app, and the station map page shows no console messages, so no CSP violations. Only that page was checked in the browser.
 
 **Problem:** a live response returns only `Cache-Control` and `Server`. Missing:
 
