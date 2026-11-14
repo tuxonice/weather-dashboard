@@ -4,27 +4,7 @@
 {% block title %}{{ 'uv.title'|trans }}{% endblock %}
 
 {% block stylesheets %}
-<style>
-    .uv-cell {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 2.5rem;
-        padding: .15rem .5rem;
-        border-radius: .375rem;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-    }
-    .uv-swatch {
-        display: inline-block;
-        width: .75rem;
-        height: .75rem;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,.1);
-        margin-right: .35rem;
-        vertical-align: -1px;
-    }
-</style>
+<link rel="stylesheet" href="/css/pages/uv.css">
 {% endblock %}
 
 {% block body %}
@@ -52,10 +32,10 @@
             {% for item in legend %}
                 <div class="col">
                     <div class="card h-100 border-start border-3"
-                         style="border-left-color: {{ item.color }} !important;">
+                         data-style="border-left-color: {{ item.color }} !important;">
                         <div class="card-body py-3">
                             <div class="small text-body-secondary">
-                                <span class="uv-swatch" style="background: {{ item.color }};"></span>
+                                <span class="uv-swatch" data-style="background: {{ item.color }};"></span>
                                 {{ item.label|trans }}
                             </div>
                             <div class="h4 mb-1">
@@ -109,7 +89,7 @@
                                                     <span class="text-body-secondary">–</span>
                                                 {% else %}
                                                     <span class="uv-cell"
-                                                          style="background: {{ cell.color }}; color: {{ cell.text }};"
+                                                          data-style="background: {{ cell.color }}; color: {{ cell.text }};"
                                                           title="{{ cell.level_label|trans }}">
                                                         {{ cell.uv|number_format(1) }}
                                                     </span>

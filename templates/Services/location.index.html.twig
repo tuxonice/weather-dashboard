@@ -11,7 +11,7 @@
                 {{ 'location.subtitle'|trans }}
             </p>
         </div>
-        <div class="flex-grow-1" style="max-width: 320px;">
+        <div class="flex-grow-1 location-filter-wrap">
             <label for="location-filter" class="visually-hidden">{{ 'common.filter_locations'|trans }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
@@ -62,31 +62,9 @@
 {% endblock %}
 
 {% block stylesheets %}
-<style>
-    .location-card { transition: transform .08s ease-in-out, box-shadow .08s ease-in-out; }
-    .location-card:hover { transform: translateY(-1px); box-shadow: 0 .25rem .75rem rgba(0,0,0,.08); }
-</style>
+<link rel="stylesheet" href="/css/pages/location.css">
 {% endblock %}
 
 {% block javascripts %}
-<script>
-    // Client-side filter: hides non-matching location cards and empty regions.
-    (function () {
-        const input = document.getElementById('location-filter');
-        if (!input) return;
-        const regions = document.querySelectorAll('[data-region]');
-        input.addEventListener('input', function () {
-            const q = this.value.trim().toLowerCase();
-            regions.forEach(region => {
-                let visible = 0;
-                region.querySelectorAll('[data-location-name]').forEach(card => {
-                    const match = !q || card.dataset.locationName.includes(q);
-                    card.classList.toggle('d-none', !match);
-                    if (match) visible++;
-                });
-                region.classList.toggle('d-none', visible === 0);
-            });
-        });
-    })();
-</script>
+<script src="/js/pages/location-filter.js"></script>
 {% endblock %}

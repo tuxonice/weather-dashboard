@@ -1,0 +1,297 @@
+    (function () {
+        var raw = document.getElementById('stations-data').textContent;
+        var stations = JSON.parse(raw);
+        var i18n = JSON.parse(document.getElementById('station-i18n').textContent);
+        var detailUrlTemplate = JSON.parse(document.getElementById('station-detail-url').textContent);
+
+        var map = L.map('station-map', {
+            center: [39.5, -8.0],
+            zoom: 7,
+            scrollWheelZoom: true,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        function rgb(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+
+        function interpolateStops(value, stops) {
+            if (value === null || value === undefined) return null;
+            if (value <= stops[0].t) return stops[0].c;
+            for (var i = 1; i < stops.length; i++) {
+                if (value <= stops[i].t) {
+                    var a = stops[i - 1], b = stops[i], k = (value - a.t) / (b.t - a.t);
+                    return [
+                        Math.round(a.c[0] + (b.c[0] - a.c[0]) * k),
+                        Math.round(a.c[1] + (b.c[1] - a.c[1]) * k),
+                        Math.round(a.c[2] + (b.c[2] - a.c[2]) * k),
+                    ];
+                }
+            }
+            return stops[stops.length - 1].c;
+        }
+
+        function contrastColor(c) {
+            var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255;
+            var lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return lum < 0.45 ? '#fff' : '#000';
+        }
+
+        // Shared by the measured- and apparent-temperature layers so the two
+        // are directly comparable when switching between them.
+        var TEMPERATURE_STOPS = [
+            { t:  0, c: [ 33, 102, 172] },
+            { t: 10, c: [ 67, 147, 195] },
+            { t: 15, c: [146, 197, 222] },
+            { t: 20, c: [254, 224, 139] },
+            { t: 25, c: [244, 165,  68] },
+            { t: 30, c: [215,  48,  39] },
+            { t: 35, c: [140,  10,  20] },
+        ];
+
+        var LAYERS = {
+            temperature: {
+                field: 'temperature_c',
+                unit: '°C',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + '°'; },
+                stops: TEMPERATURE_STOPS,
+            },
+            apparent_temp: {
+                field: 'apparent_temperature_c',
+                unit: '°C',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + '°'; },
+                stops: TEMPERATURE_STOPS,
+            },
+            humidity: {
+                field: 'humidity_pct',
+                unit: '%',
+                decimals: 0,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + '%'; },
+                stops: [
+                    { t:   0, c: [255, 255, 255] },
+                    { t:  40, c: [144, 202, 249] },
+                    { t:  70, c: [  2, 119, 189] },
+                    { t: 100, c: [  1,  87, 155] },
+                ],
+            },
+            wind: {
+                field: 'wind_speed_kmh',
+                unit: 'km/h',
+                decimals: 0,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + ''; },
+                stops: [
+                    { t:  0, c: [232, 245, 233] },
+                    { t: 20, c: [129, 199, 132] },
+                    { t: 40, c: [ 56, 142,  60] },
+                    { t: 60, c: [ 27,  94,  32] },
+                    { t: 80, c: [  0,  51,   0] },
+                ],
+                iconSize: [36, 36],
+                iconHtmlFn: function (s, bg, fg) {
+                    var speed = s.wind_speed_kmh;
+                    var bearing = s.wind_dir_bearing;
+                    if (speed === null || speed === undefined) {
+                        return '<div class="station-marker station-marker--missing" data-style="width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+                             + '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg></div>';
+                    }
+                    var arrowSvg = (bearing !== null && bearing !== undefined)
+                        ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" data-style="transform:rotate(' + (bearing + 180) + 'deg);display:block;flex-shrink:0;">'
+                          + '<path d="M8 1l2.5 10.5L8 10l-2.5 2.5z"/>'
+                          + '</svg>'
+                        : '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" data-style="display:block;flex-shrink:0;"><circle cx="8" cy="8" r="3"/></svg>';
+                    return '<div class="station-marker" data-style="background:' + bg + ';color:' + fg + ';width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 0;">'
+                         + arrowSvg
+                         + '<span data-style="font:600 12px/1 system-ui,sans-serif;">' + Math.round(speed) + '</span>'
+                         + '</div>';
+                },
+            },
+            rain: {
+                field: 'precipitation_mm',
+                unit: 'mm',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Number(v).toFixed(1); },
+                stops: [
+                    { t:  0,  c: [255, 255, 255] },
+                    { t:  2,  c: [179, 218, 241] },
+                    { t:  5,  c: [ 66, 146, 198] },
+                    { t: 10,  c: [  8,  81, 156] },
+                    { t: 20,  c: [  2,  56, 88 ] },
+                ],
+            },
+            rain_24h: {
+                field: 'precipitation_24h_mm',
+                unit: 'mm',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Number(v).toFixed(1); },
+                stops: [
+                    { t:  0,  c: [255, 255, 255] },
+                    { t:  5,  c: [179, 218, 241] },
+                    { t: 15,  c: [ 66, 146, 198] },
+                    { t: 30,  c: [  8,  81, 156] },
+                    { t: 60,  c: [  2,  56,  88] },
+                ],
+            },
+            radiation_24h: {
+                field: 'radiation_24h_kwh_m2',
+                unit: 'kWh/m²',
+                decimals: 1,
+                labelFn: function (v) { return v === null ? null : Number(v).toFixed(1); },
+                stops: [
+                    { t:  0, c: [255, 247, 188] },
+                    { t:  3, c: [254, 196,  79] },
+                    { t:  6, c: [236, 112,  20] },
+                    { t:  9, c: [153,  52,   4] },
+                ],
+            },
+            pressure: {
+                field: 'pressure_hpa',
+                unit: 'hPa',
+                decimals: 0,
+                labelFn: function (v) { return v === null ? null : Math.round(v) + ''; },
+                stops: [
+                    { t:  970, c: [ 33, 102, 172] },
+                    { t:  995, c: [178, 171, 210] },
+                    { t: 1013, c: [247, 247, 247] },
+                    { t: 1020, c: [253, 184,  99] },
+                    { t: 1035, c: [178,  24,  43] },
+                ],
+            },
+        };
+
+        function fmt(value, unit, decimals) {
+            if (value === null || value === undefined) return '—';
+            return Number(value).toFixed(decimals == null ? 1 : decimals) + '\u00a0' + unit;
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+            });
+        }
+
+        var activeMarkers = [];
+        var bounds = [];
+
+        stations.forEach(function (s) { bounds.push([s.lat, s.lng]); });
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+        }
+
+        function buildPopup(s) {
+            return '<strong>' + escapeHtml(s.name || i18n.station) + '</strong>'
+                + '<div class="small text-body-secondary mb-2">#' + escapeHtml(s.id) + '</div>'
+                + '<dl class="small">'
+                +   '<dt>' + escapeHtml(i18n.temperature) + '</dt><dd>' + fmt(s.temperature_c, '°C', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.apparent_temp) + '</dt><dd>'
+                +     (s.apparent_wind_assumed
+                        ? '<em title="' + escapeHtml(i18n.apparent_assumed) + '">\u2248' + fmt(s.apparent_temperature_c, '°C', 1) + '</em>'
+                        : fmt(s.apparent_temperature_c, '°C', 1))
+                +     '</dd>'
+                +   '<dt>' + escapeHtml(i18n.humidity)    + '</dt><dd>' + fmt(s.humidity_pct,  '%', 0) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.pressure)    + '</dt><dd>' + fmt(s.pressure_hpa,  'hPa', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.rain)        + '</dt><dd>' + fmt(s.precipitation_mm, 'mm', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.rain_24h)    + '</dt><dd>' + fmt(s.precipitation_24h_mm, 'mm', 1) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.radiation_24h) + '</dt><dd>' + fmt(s.radiation_24h_kwh_m2, 'kWh/m²', 2) + '</dd>'
+                +   '<dt>' + escapeHtml(i18n.wind)        + '</dt><dd>' + fmt(s.wind_speed_kmh, 'km/h', 1)
+                +     (s.wind_dir_code ? ' ' + escapeHtml(s.wind_dir_code) : '') + '</dd>'
+                + '</dl>'
+                + '<a href="' + detailUrlTemplate.replace('999999999', encodeURIComponent(s.id)) + '">' + escapeHtml(i18n.open) + ' →</a>';
+        }
+
+        function renderLayer(layerId) {
+            activeMarkers.forEach(function (m) { map.removeLayer(m); });
+            activeMarkers = [];
+
+            var layer = LAYERS[layerId];
+
+            var isCategorical = !!layer.categorical;
+
+            var values = !isCategorical ? stations.map(function (s) {
+                var v = s[layer.field];
+                return (v === null || v === undefined) ? null : Number(v);
+            }).filter(function (v) { return v !== null; }) : [];
+
+            var minVal = values.length ? Math.min.apply(null, values) : null;
+            var maxVal = values.length ? Math.max.apply(null, values) : null;
+
+            stations.forEach(function (s) {
+                var value = s[layer.field];
+                var numVal = (!isCategorical && value !== null && value !== undefined) ? Number(value) : null;
+                var c = isCategorical ? layer.colorFn(value, s) : interpolateStops(numVal, layer.stops);
+                var bg = c ? rgb(c) : '#e9ecef';
+                var fg = c ? contrastColor(c) : '#6c757d';
+                var iconHtml;
+                if (layer.iconHtmlFn) {
+                    iconHtml = layer.iconHtmlFn(s, bg, fg);
+                } else {
+                    var labelInput = isCategorical ? value : numVal;
+                    var rawLabel = layer.labelFn(labelInput);
+                    var label = rawLabel === null ? '—' : rawLabel;
+                    var isMissing = isCategorical ? !c : numVal === null;
+                    var cls = 'station-marker' + (isMissing ? ' station-marker--missing' : '');
+                    iconHtml = '<div class="' + cls + '" data-style="background:' + bg + ';color:' + fg + ';padding:4px 6px;">' + escapeHtml(label) + '</div>';
+                }
+
+                var sz = layer.iconSize || [38, 22];
+                var icon = L.divIcon({
+                    className: '',
+                    html: iconHtml,
+                    iconSize: sz,
+                    iconAnchor: [sz[0] / 2, sz[1] / 2],
+                });
+
+                var marker = L.marker([s.lat, s.lng], { icon: icon, title: s.name || (i18n.station + ' ' + s.id) });
+                marker.bindPopup(buildPopup(s));
+                marker.addTo(map);
+                applyInlineStyles(marker.getElement());
+                activeMarkers.push(marker);
+            });
+
+            var legendEl = document.getElementById('map-legend');
+            if (legendEl) {
+                if (!isCategorical && minVal !== null && maxVal !== null) {
+                    var text = i18n.layer_legend
+                        .replace('%min%', Number(minVal).toFixed(layer.decimals))
+                        .replace('%max%', Number(maxVal).toFixed(layer.decimals))
+                        .replace('%unit%', layer.unit);
+                    legendEl.textContent = text;
+                } else {
+                    legendEl.textContent = '';
+                }
+            }
+        }
+
+        var SESSION_KEY = 'station_map_layer';
+        var savedLayer = sessionStorage.getItem(SESSION_KEY);
+        var initialLayer = (savedLayer && LAYERS[savedLayer]) ? savedLayer : 'temperature';
+
+        var switcher = document.getElementById('layer-switcher');
+        if (switcher) {
+            switcher.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-layer]');
+                if (!btn) return;
+                var layerId = btn.dataset.layer;
+                if (!LAYERS[layerId]) return;
+                switcher.querySelectorAll('[data-layer]').forEach(function (b) {
+                    b.className = 'btn btn-outline-secondary';
+                });
+                btn.className = 'btn btn-primary';
+                sessionStorage.setItem(SESSION_KEY, layerId);
+                renderLayer(layerId);
+            });
+
+            var activeBtn = switcher.querySelector('[data-layer="' + initialLayer + '"]');
+            if (activeBtn && initialLayer !== 'temperature') {
+                switcher.querySelectorAll('[data-layer]').forEach(function (b) {
+                    b.className = 'btn btn-outline-secondary';
+                });
+                activeBtn.className = 'btn btn-primary';
+            }
+        }
+
+        renderLayer(initialLayer);
+    })();

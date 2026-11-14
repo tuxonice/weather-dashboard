@@ -1,0 +1,25 @@
+    #outlook-map {
+        height: 60vh;
+        min-height: 380px;
+        border-radius: .5rem;
+        z-index: 0;
+    }
+    .temp-cell {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.4rem;
+        padding: .15rem .5rem;
+        border-radius: .375rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+    .temp-swatch {
+        display: inline-block;
+        width: .65rem;
+        height: .65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0,0,0,.1);
+        margin-right: .25rem;
+        vertical-align: -1px;
+    }

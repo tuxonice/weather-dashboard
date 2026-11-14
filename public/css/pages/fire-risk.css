@@ -1,0 +1,15 @@
+    #fire-map {
+        height: 70vh;
+        min-height: 420px;
+        border-radius: .5rem;
+        z-index: 0;
+    }
+    .fire-swatch {
+        display: inline-block;
+        width: .75rem;
+        height: .75rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0,0,0,.1);
+        margin-right: .25rem;
+        vertical-align: -1px;
+    }

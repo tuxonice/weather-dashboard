@@ -125,6 +125,10 @@ final class ContainerFactory
         $container->getDefinition('twig')
             ->addMethodCall('addGlobal', ['app_debug', $debug]);
 
+        // Contact email shown in the footer. Configured in .env; empty hides the link.
+        $container->getDefinition('twig')
+            ->addMethodCall('addGlobal', ['operator_email', (string) ($_ENV['APP_OPERATOR_EMAIL'] ?? $_SERVER['APP_OPERATOR_EMAIL'] ?? '')]);
+
         // --- IPMA client (cached PSR-16 filesystem connector) ---------------
         // The library's `Ipma*::create*Api()` factories now accept a PSR-16
         // cache directly; only repositories that bypass those factories

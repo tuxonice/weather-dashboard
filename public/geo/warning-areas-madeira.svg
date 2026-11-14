@@ -19,7 +19,7 @@
        stroke-width="0.6"
        id="g3"
        transform="matrix(0.26458333,0,0,0.26458333,94.326258,64.026321)"
-       style="display:block">
+       data-style="display:block">
       <path
          data-area="MCS"
          data-name="Madeira"
