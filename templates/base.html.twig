@@ -213,7 +213,8 @@
     {{ 'footer.source_code'|trans|raw }}
     <span class="mx-2" aria-hidden="true">·</span>
     {% if operator_email %}
-    <a href="mailto:{{ operator_email|e('url') }}">{{ 'footer.contact'|trans }}</a>
+    <a href="#" data-contact="{{ operator_email|reverse }}" hidden>{{ 'footer.contact'|trans }}</a>
+    <noscript>{{ 'footer.contact_nojs'|trans }}</noscript>
     <span class="mx-2" aria-hidden="true">·</span>
     {% endif %}
     {{ 'footer.local_time'|trans }}
@@ -222,6 +223,7 @@
 <script
     src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
 <script src="/js/pages/inline-styles.js"></script>
+<script src="/js/pages/contact-link.js"></script>
 {% block javascripts %}{% endblock %}
 <script src="/js/pages/sw-register.js"></script>
 </body>

@@ -112,6 +112,7 @@ footer:
     source_code: "<a href=\"https://github.com/tuxonice/meteo-dashboard\" target=\"_blank\" rel=\"noopener\"><i class=\"bi bi-github\" aria-hidden=\"true\"></i> Source code</a>"
     local_time: "Times shown in local time"
     contact: "Contact"
+    contact_nojs: "Enable JavaScript to see the contact link"
 
 home:
     title: "Weather Dashboard"

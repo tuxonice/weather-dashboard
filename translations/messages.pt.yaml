@@ -112,6 +112,7 @@ footer:
     source_code: "<a href=\"https://github.com/tuxonice/weather-dashboard\" target=\"_blank\" rel=\"noopener\"><i class=\"bi bi-github\" aria-hidden=\"true\"></i> Código fonte</a>"
     local_time: "Horários em hora local"
     contact: "Contacto"
+    contact_nojs: "Ative o JavaScript para ver o contacto"
 
 home:
     title: "Painel Meteorológico"
