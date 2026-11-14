@@ -5,36 +5,8 @@
 
 {% block stylesheets %}
 <link rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""/>
-<style>
-    #outlook-map {
-        height: 60vh;
-        min-height: 380px;
-        border-radius: .5rem;
-        z-index: 0;
-    }
-    .temp-cell {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 2.4rem;
-        padding: .15rem .5rem;
-        border-radius: .375rem;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-    }
-    .temp-swatch {
-        display: inline-block;
-        width: .65rem;
-        height: .65rem;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,.1);
-        margin-right: .25rem;
-        vertical-align: -1px;
-    }
-</style>
+      href="/vendor/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/css/pages/outlook.css">
 {% endblock %}
 
 {% block body %}
@@ -75,7 +47,7 @@
             <span class="small text-body-secondary">{{ 'outlook.tmax_legend'|trans }}</span>
             {% for band in temperature_legend %}
                 <span class="small">
-                    <span class="temp-swatch" style="background: {{ band.color }};" aria-hidden="true"></span>
+                    <span class="temp-swatch" data-style="background: {{ band.color }};" aria-hidden="true"></span>
                     {{ band.label }} °C
                 </span>
             {% endfor %}
@@ -133,14 +105,14 @@
                                     <td class="text-center text-body-secondary">{{ row.t_min|number_format(0) }}°</td>
                                     <td class="text-center">
                                         <span class="temp-cell"
-                                              style="background: {{ row.color }}; color: {{ row.text_color }};"
+                                              data-style="background: {{ row.color }}; color: {{ row.text_color }};"
                                               title="{{ row.temp_label }} °C">
                                             {{ row.t_max|number_format(0) }}°
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         {% if row.uv_index is not null %}
-                                            <span class="badge" style="background: {{ row.uv_color }}; color: {{ row.uv_text_color }};" title="{{ row.uv_label|trans }}">
+                                            <span class="badge" data-style="background: {{ row.uv_color }}; color: {{ row.uv_text_color }};" title="{{ row.uv_label|trans }}">
                                                 {{ row.uv_index|number_format(0) }}
                                             </span>
                                         {% else %}
@@ -161,62 +133,12 @@
 
 {% block javascripts %}
 {% if not error and total_locations > 0 %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
 <script id="outlook-data" type="application/json">{{ features_json|raw }}</script>
 <script id="outlook-i18n" type="application/json">{{ {
     rain: 'location.rain'|trans,
 }|json_encode|raw }}</script>
-<script>
-    (function () {
-        var features = JSON.parse(document.getElementById('outlook-data').textContent);
-        var i18n = JSON.parse(document.getElementById('outlook-i18n').textContent);
-
-        var map = L.map('outlook-map', {
-            center: [39.5, -8.0],
-            zoom: 6,
-            scrollWheelZoom: true,
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
-
-        function escapeHtml(s) {
-            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-                return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
-            });
-        }
-
-        var bounds = [];
-        features.forEach(function (f) {
-            var marker = L.circleMarker([f.lat, f.lng], {
-                radius: 7,
-                weight: 1,
-                color: '#ffffff',
-                fillColor: f.color,
-                fillOpacity: 0.9,
-            });
-            marker.bindPopup(
-                '<strong>' + escapeHtml(f.name) + '</strong>'
-                + '<div><i class="bi ' + escapeHtml(f.icon) + ' me-1" aria-hidden="true"></i>' + escapeHtml(f.weather) + '</div>'
-                + '<div class="small text-body-secondary">'
-                +   'Min ' + Math.round(f.t_min) + '° · Max ' + Math.round(f.t_max) + '° · '
-                +   Math.round(f.rain_prob) + '% ' + escapeHtml(i18n.rain.toLowerCase())
-                + '</div>'
-                + '<div class="small text-body-secondary">' + escapeHtml(f.wind) + '</div>'
-            );
-            marker.addTo(map);
-            bounds.push([f.lat, f.lng]);
-        });
-
-        if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-        }
-    })();
-</script>
+<script src="/js/pages/outlook.js"></script>
 {% endif %}
 <script src="/js/relative-time.js"></script>
 {% endblock %}

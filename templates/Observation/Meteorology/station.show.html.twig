@@ -234,7 +234,7 @@
                 </p>
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <div style="position: relative; height: 18rem;">
+                        <div data-style="position: relative; height: 18rem;">
                             <canvas id="trend-{{ chart.id }}"
                                     role="img"
                                     aria-label="{{ chart.heading|trans }}"></canvas>
@@ -252,7 +252,7 @@
                 <p class="text-body-secondary small mb-3">{{ 'station.wind_rose_subtitle_speed'|trans }}</p>
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <div class="mx-auto" style="max-width: 22rem;">
+                        <div class="mx-auto" data-style="max-width: 22rem;">
                             <canvas id="wind-rose"
                                     role="img"
                                     aria-label="{{ 'station.wind_rose_aria'|trans }}"></canvas>
@@ -260,8 +260,8 @@
                         {# Colour scale: sector fill encodes average wind speed.
                            Endpoints match SPEED_MAX (40 km/h) and the blue→red
                            HSL ramp in the chart script below. #}
-                        <div class="mx-auto mt-3" style="max-width: 18rem;">
-                            <div class="rounded" style="height: 0.6rem; background: linear-gradient(to right, hsl(240,70%,50%), hsl(180,70%,50%), hsl(120,70%,50%), hsl(60,70%,50%), hsl(0,70%,50%));"></div>
+                        <div class="mx-auto mt-3" data-style="max-width: 18rem;">
+                            <div class="rounded" data-style="height: 0.6rem; background: linear-gradient(to right, hsl(240,70%,50%), hsl(180,70%,50%), hsl(120,70%,50%), hsl(60,70%,50%), hsl(0,70%,50%));"></div>
                             <div class="d-flex justify-content-between text-body-secondary small mt-1">
                                 <span>0</span>
                                 <span>{{ 'station.wind_rose_speed_legend'|trans }}</span>
@@ -282,9 +282,7 @@
 
 {% block javascripts %}
 {% if wind_rose or trend_charts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
-        integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
-        crossorigin="anonymous"></script>
+<script src="/vendor/chartjs/chart.umd.min.js"></script>
 {% endif %}
 {% if wind_rose %}
 <script id="wind-rose-data" type="application/json">{{ {
@@ -297,101 +295,7 @@
         noSpeed: 'station.wind_rose_no_speed'|trans,
     },
 }|json_encode|raw }}</script>
-<script>
-    (function () {
-        var data = JSON.parse(document.getElementById('wind-rose-data').textContent);
-
-        // Top of the colour scale, in km/h. Average hourly speeds rarely
-        // exceed this, and a fixed domain keeps colours comparable between
-        // stations. Speed maps to a hue ramp: blue (calm) → red (strong).
-        var SPEED_MAX = 40;
-        function speedColor(speed, alpha) {
-            if (speed === null || speed === undefined) {
-                return 'rgba(173, 181, 189, ' + alpha + ')'; // grey: no speed data
-            }
-            var t = Math.max(0, Math.min(1, speed / SPEED_MAX));
-            var hue = 240 - 240 * t; // 240° blue → 0° red
-            return 'hsla(' + hue + ', 70%, 50%, ' + alpha + ')';
-        }
-
-        // Paints the compass codes (N, NE, …) around the rim at their true
-        // bearings. Labels are ordered N→NW, i.e. 0°, 45°, … 315° clockwise
-        // from the top — matching the chart's -22.5° start angle.
-        var compassLabels = {
-            id: 'compassLabels',
-            afterDraw: function (chart) {
-                var scale = chart.scales.r;
-                if (!scale) {
-                    return;
-                }
-                var ctx = chart.ctx;
-                var radius = scale.drawingArea + 16;
-                ctx.save();
-                ctx.font = '600 13px system-ui, sans-serif';
-                ctx.fillStyle = '#6c757d';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                chart.data.labels.forEach(function (label, i) {
-                    var bearing = (Math.PI / 180) * (i * 45);
-                    var x = scale.xCenter + radius * Math.sin(bearing);
-                    var y = scale.yCenter - radius * Math.cos(bearing);
-                    ctx.fillText(label, x, y);
-                });
-                ctx.restore();
-            },
-        };
-
-        new Chart(document.getElementById('wind-rose'), {
-            type: 'polarArea',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    data: data.counts,
-                    // Radius = hours from each direction; fill colour = the
-                    // average wind speed recorded from that direction.
-                    backgroundColor: data.avgSpeeds.map(function (s) { return speedColor(s, 0.6); }),
-                    borderColor: data.avgSpeeds.map(function (s) { return speedColor(s, 0.95); }),
-                    borderWidth: 1,
-                }],
-            },
-            options: {
-                responsive: true,
-                // Leave room around the rim for the compass labels.
-                layout: { padding: 24 },
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        // Chart.js v4 polar-area rotation lives on the radial
-                        // scale (the chart-level `startAngle` option is ignored
-                        // for polar charts). The default of 0 already centres
-                        // the first sector (N) at the top, with each 45° sector
-                        // centred on its compass point — exactly what we want.
-                        startAngle: -22.5,
-                        ticks: { precision: 0, backdropColor: 'transparent' },
-                    },
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                return ctx.label + ': ' + ctx.raw + ' ' + data.i18n.hours;
-                            },
-                            afterLabel: function (ctx) {
-                                var speed = data.avgSpeeds[ctx.dataIndex];
-                                if (speed === null || speed === undefined) {
-                                    return data.i18n.avgSpeed + ': ' + data.i18n.noSpeed;
-                                }
-                                return data.i18n.avgSpeed + ': ' + speed.toFixed(1) + ' km/h';
-                            },
-                        },
-                    },
-                },
-            },
-            plugins: [compassLabels],
-        });
-    })();
-</script>
+<script src="/js/pages/station-show.js"></script>
 {% endif %}
 {% if trend_charts %}
 <script id="trend-data" type="application/json">{{ {
@@ -418,190 +322,7 @@
         } : null,
     }),
 }|json_encode|raw }}</script>
-<script>
-    (function () {
-        var data = JSON.parse(document.getElementById('trend-data').textContent);
-
-        // Draws an upward-pointing arrow (north / 0°) onto a small canvas, used
-        // as a Chart.js point style. pointRotation then turns it to the wind
-        // direction. Returns a canvas so it renders synchronously (no onload).
-        function makeArrow(color) {
-            var size = 20, cx = size / 2;
-            var canvas = document.createElement('canvas');
-            canvas.width = canvas.height = size;
-            var ctx = canvas.getContext('2d');
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.beginPath();          // shaft
-            ctx.moveTo(cx, size - 4);
-            ctx.lineTo(cx, 7);
-            ctx.stroke();
-            ctx.beginPath();          // head
-            ctx.moveTo(cx, 2);
-            ctx.lineTo(cx - 4, 9);
-            ctx.lineTo(cx + 4, 9);
-            ctx.closePath();
-            ctx.fill();
-            return canvas;
-        }
-
-        data.charts.forEach(function (c) {
-            var el = document.getElementById('trend-' + c.id);
-            if (!el) {
-                return;
-            }
-
-            var isBar = c.chartType === 'bar';
-
-            var dataset = isBar ? {
-                data: c.values,
-                backgroundColor: 'rgba(' + c.color + ', 0.6)',
-                borderColor: 'rgba(' + c.color + ', 0.9)',
-                borderWidth: 1,
-                borderRadius: 3,
-            } : {
-                data: c.values,
-                borderColor: 'rgba(' + c.color + ', 0.9)',
-                backgroundColor: 'rgba(' + c.color + ', 0.12)',
-                borderWidth: 2,
-                fill: true,
-                // Spline smoothing.
-                tension: 0.4,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-            };
-
-            var datasets = [dataset];
-
-            // Second line on the same axis. The measured line drops its own
-            // fill so the only shaded region is the gap between the two,
-            // tinted by which line sits on top.
-            if (c.overlay) {
-                dataset.fill = false;
-                dataset.label = c.label;
-
-                var overlay = {
-                    data: c.overlay.values,
-                    label: c.overlay.label,
-                    borderColor: 'rgba(' + c.overlay.color + ', 0.95)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    pointRadius: 2,
-                    pointHoverRadius: 5,
-                    fill: {
-                        target: '-1',
-                        above: 'rgba(220, 53, 69, 0.18)',
-                        below: 'rgba(13, 110, 253, 0.18)',
-                    },
-                };
-
-                // Hours plotted from an assumed calm are drawn hollow so they
-                // read as estimates rather than measurements.
-                if (c.overlay.assumed) {
-                    overlay.pointBackgroundColor = c.overlay.assumed.map(function (a) {
-                        return a ? '#fff' : 'rgba(' + c.overlay.color + ', 0.95)';
-                    });
-                    overlay.pointBorderColor = 'rgba(' + c.overlay.color + ', 0.95)';
-                    overlay.pointBorderWidth = c.overlay.assumed.map(function (a) { return a ? 2 : 1; });
-                    overlay.pointRadius = c.overlay.assumed.map(function (a) { return a ? 4 : 2; });
-                    overlay.pointHoverRadius = c.overlay.assumed.map(function (a) { return a ? 6 : 5; });
-                }
-
-                datasets.push(overlay);
-            }
-
-            // Wind speed: render each point as a direction arrow. Calm/unknown
-            // hours (null bearing) keep a plain dot.
-            if (c.bearings) {
-                var arrow = makeArrow('rgba(' + c.color + ', 0.95)');
-                dataset.pointStyle = c.bearings.map(function (b) {
-                    return b === null ? 'circle' : arrow;
-                });
-                // Arrow points north at 0°; rotate to the downwind bearing
-                // (from-bearing + 180) so it shows where the wind is heading.
-                dataset.pointRotation = c.bearings.map(function (b) {
-                    return b === null ? 0 : (b + 180) % 360;
-                });
-                dataset.pointRadius = c.bearings.map(function (b) {
-                    return b === null ? 2 : 9;
-                });
-                dataset.pointHoverRadius = c.bearings.map(function (b) {
-                    return b === null ? 4 : 11;
-                });
-            }
-
-            new Chart(el, {
-                type: isBar ? 'bar' : 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: datasets,
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: {
-                            beginAtZero: c.zero,
-                            title: { display: true, text: c.unit },
-                        },
-                        x: {
-                            ticks: { maxRotation: 0, autoSkipPadding: 12 },
-                        },
-                    },
-                    plugins: {
-                        legend: { display: !!c.overlay, position: 'bottom', labels: { usePointStyle: true, boxHeight: 8 } },
-                        tooltip: {
-                            callbacks: {
-                                label: function (ctx) {
-                                    if (ctx.parsed.y === null || ctx.parsed.y === undefined) {
-                                        return undefined;
-                                    }
-                                    var value = ctx.parsed.y.toFixed(c.decimals) + ' ' + c.unit;
-                                    return c.overlay ? ctx.dataset.label + ': ' + value : value;
-                                },
-                                afterLabel: function (ctx) {
-                                    var notes = [];
-                                    if (c.dirCodes) {
-                                        var code = c.dirCodes[ctx.dataIndex];
-                                        if (code) {
-                                            notes.push(data.dirLabel + ': ' + code);
-                                        }
-                                    }
-                                    if (c.overlay && ctx.datasetIndex === 1
-                                        && c.overlay.assumed && c.overlay.assumed[ctx.dataIndex]) {
-                                        notes.push(data.assumedNote);
-                                    }
-                                    return notes.length ? notes : undefined;
-                                },
-                                // With two temperature lines the gap between
-                                // them is the point, so state it outright.
-                                footer: function (items) {
-                                    if (!c.overlay || items.length < 2) {
-                                        return undefined;
-                                    }
-                                    var measured = null, apparent = null;
-                                    items.forEach(function (i) {
-                                        if (i.datasetIndex === 0) { measured = i.parsed.y; }
-                                        if (i.datasetIndex === 1) { apparent = i.parsed.y; }
-                                    });
-                                    if (measured === null || apparent === null) {
-                                        return undefined;
-                                    }
-                                    var d = apparent - measured;
-                                    var sign = d > 0 ? '+' : (d < 0 ? '\u2212' : '');
-                                    return data.deltaLabel + ': ' + sign + Math.abs(d).toFixed(1) + ' ' + c.unit;
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-        });
-    })();
-</script>
+<script src="/js/pages/station-show-trends.js"></script>
 {% endif %}
 <script src="/js/relative-time.js"></script>
 {% endblock %}

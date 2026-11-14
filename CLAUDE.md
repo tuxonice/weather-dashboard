@@ -18,7 +18,7 @@ Everything runs inside the `app` container — the host does not need PHP. The `
 | Filter by test name | `docker compose run --rm app vendor/bin/phpunit --filter testSeverityOrdering` |
 | Arbitrary composer command | `make composer CMD="require foo/bar"` |
 
-There is no JS/CSS build step — Bootstrap 5 and Bootstrap Icons are loaded from a CDN by `templates/base.html.twig`.
+There is no JS/CSS build step — Bootstrap 5, Bootstrap Icons, Leaflet, Chart.js and amCharts 5 are vendored under `public/vendor/` and referenced by absolute `/vendor/...` paths (bump `CACHE_NAME` in `public/sw.js` when updating them). Only OSM map tiles are still fetched remotely.
 
 ## Cache
 
@@ -71,6 +71,7 @@ These helpers classify IPMA codes into Bootstrap colour/icon metadata.
 ### Templating & i18n
 
 - Per-page templates live in `templates/<feature>/`, all extend `templates/base.html.twig`.
+- **Strict CSP:** no inline `<script>` or `<style>` blocks and no `style="..."` attributes in templates (the policy is set by `src/Framework/SecurityHeadersSubscriber.php`). Put page code in `public/js/pages/` and `public/css/pages/`. Pass server values through a `<script type="application/json">` block or a data attribute. Use `data-style="..."` for dynamic inline styles; `public/js/pages/inline-styles.js` applies them (call `applyInlineStyles(el)` after inserting markup from JavaScript).
 - Translation catalogues are YAML in `translations/messages.{pt,en}.yaml`. Default locale is `pt`, fallback `en`. `TranslatorFactory` auto-discovers any `messages.<locale>.yaml` (and other domains following `<domain>.<locale>.yaml`).
 - The language switcher in `base.html.twig` is a dropdown of plain links to the *same* logical route in the other locale (it strips the `.pt`/`.en` suffix from `app_current_route`, re-appends the target locale, and reuses `app_route_params` minus `_locale`). Matching `<link rel="alternate" hreflang>` tags are emitted in `<head>` the same way. Switching language just navigates to the locale-prefixed URL.
 

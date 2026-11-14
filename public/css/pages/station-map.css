@@ -1,0 +1,22 @@
+    #station-map {
+        height: 70vh;
+        min-height: 420px;
+        border-radius: .5rem;
+        z-index: 0;
+    }
+    .station-marker {
+        border: 2px solid #fff;
+        border-radius: 999px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.25);
+        color: #111;
+        font: 600 11px/1 system-ui, sans-serif;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .station-marker--missing {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    .leaflet-popup-content dl { margin: 0; }
+    .leaflet-popup-content dt { font-weight: 600; }
+    .leaflet-popup-content dd { margin: 0 0 .25rem 0; }

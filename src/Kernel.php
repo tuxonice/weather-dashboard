@@ -7,6 +7,7 @@ namespace App;
 use App\Framework\ContainerFactory;
 use App\Framework\ExceptionSubscriber;
 use App\Framework\LocaleSubscriber;
+use App\Framework\SecurityHeadersSubscriber;
 use App\Framework\RouteLoader;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -58,6 +59,7 @@ final class Kernel implements HttpKernelInterface, TerminableInterface
             $this->container->get('router.request_context'),
             $this->container->get('twig.extension.localized_routing'),
         ));
+        $dispatcher->addSubscriber(new SecurityHeadersSubscriber());
         $dispatcher->addSubscriber(new ExceptionSubscriber(
             $this->container->get('twig'),
             $this->debug,

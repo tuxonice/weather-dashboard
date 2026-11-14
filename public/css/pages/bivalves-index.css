@@ -1,0 +1,31 @@
+    #bivalve-map {
+        height: 60vh;
+        min-height: 380px;
+        border-radius: .5rem;
+        z-index: 0;
+    }
+    .bivalve-swatch {
+        display: inline-block;
+        width: .75rem;
+        height: .75rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0,0,0,.1);
+        margin-right: .25rem;
+        vertical-align: -1px;
+    }
+    .specie-pill {
+        display: inline-block;
+        padding: .1rem .45rem;
+        border-radius: 999px;
+        background: var(--bs-tertiary-bg);
+        margin: 0 .25rem .25rem 0;
+        font-size: .8125rem;
+    }
+    .specie-pill.closed {
+        background: rgba(220, 53, 69, .12);
+        color: #842029;
+    }
+    .specie-pill.open {
+        background: rgba(25, 135, 84, .12);
+        color: #0f5132;
+    }

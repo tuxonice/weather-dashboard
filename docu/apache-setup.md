@@ -52,11 +52,18 @@ Create a new virtual host file (e.g., `/etc/apache2/sites-available/weather-dash
         Header always set X-Frame-Options "DENY"
         Header always set Referrer-Policy "strict-origin-when-cross-origin"
         Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # Content-Security-Policy is set by the application (SecurityHeadersSubscriber);
+        # do not add one here, it would conflict with the app's policy.
+        # HSTS: only enable once the site is served over HTTPS on this vhost.
+        Header always set Strict-Transport-Security "max-age=31536000"
     </IfModule>
 
     # Logging
-    ErrorLog ${APACHE_LOG_DIR}/weather-dashboard-error.log
-    CustomLog ${APACHE_LOG_DIR}/weather-dashboard-access.log combined
+    # No vhost access or error log: they would store visitor IP addresses
+    # (personal data under GDPR). See docu/eu-compliance-audit.md.
+    # Note: without ErrorLog, Apache falls back to the server-wide log
+    # (/var/log/apache2/error.log); set LogLevel and that log's retention
+    # on the server accordingly.
 
     # PHP-FPM Configuration (if using PHP-FPM)
     <IfModule mod_proxy_fcgi.c>
@@ -163,10 +170,7 @@ The virtual host configuration will be automatically updated with HTTPS redirect
    # Should return 200 OK with custom error page
    ```
 
-3. **Check logs for errors:**
-   ```bash
-   tail -f /var/log/apache2/weather-dashboard-error.log
-   ```
+3. **Check application logs for errors** (see "View Application Logs" below)
 
 ## Troubleshooting
 
@@ -238,11 +242,6 @@ Add this to your `.htaccess` file for static assets:
 # Application cache errors (if configured)
 tail -f /var/www/weather-dashboard/var/log/ipma-cache.log
 
-# Apache errors
-tail -f /var/log/apache2/weather-dashboard-error.log
-
-# Apache access logs
-tail -f /var/log/apache2/weather-dashboard-access.log
 ```
 
 ### Clear Cache

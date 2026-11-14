@@ -1,12 +1,13 @@
-const CACHE_NAME = 'ipma-shell-v1';
+const CACHE_NAME = 'ipma-shell-v3';
 
 const SHELL_ASSETS = [
     '/offline.html',
-    '/icons/icon-192.svg',
-    '/icons/icon-512.svg',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+    '/app-icons/icon-192.svg',
+    '/app-icons/icon-512.svg',
+    '/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
+    '/vendor/bootstrap/bootstrap.min.css',
+    '/vendor/bootstrap-icons/bootstrap-icons.min.css',
+    '/vendor/bootstrap/bootstrap.bundle.min.js',
 ];
 
 self.addEventListener('install', (event) => {
@@ -33,8 +34,8 @@ self.addEventListener('fetch', (event) => {
 
     // Cache-first for CDN assets and icons.
     if (
-        url.hostname === 'cdn.jsdelivr.net' ||
-        (url.hostname === self.location.hostname && url.pathname.startsWith('/icons/'))
+        url.pathname.startsWith('/vendor/') ||
+        (url.hostname === self.location.hostname && url.pathname.startsWith('/app-icons/'))
     ) {
         event.respondWith(
             caches.match(request).then((cached) => cached || fetch(request))

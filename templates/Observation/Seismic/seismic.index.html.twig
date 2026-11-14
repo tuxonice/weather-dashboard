@@ -5,37 +5,8 @@
 
 {% block stylesheets %}
 <link rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""/>
-<style>
-    #seismic-map {
-        height: 60vh;
-        min-height: 380px;
-        border-radius: .5rem;
-        z-index: 0;
-    }
-    .seismic-swatch {
-        display: inline-block;
-        width: .75rem;
-        height: .75rem;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,.1);
-        margin-right: .25rem;
-        vertical-align: -1px;
-    }
-    .seismic-mag {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 2.4rem;
-        padding: .15rem .45rem;
-        border-radius: .375rem;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        color: #fff;
-    }
-</style>
+      href="/vendor/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/css/pages/seismic-index.css">
 {% endblock %}
 
 {% block body %}
@@ -75,10 +46,10 @@
             {% for item in legend %}
                 <div class="col">
                     <div class="card h-100 border-start border-3"
-                         style="border-left-color: {{ item.color }} !important;">
+                         data-style="border-left-color: {{ item.color }} !important;">
                         <div class="card-body py-3">
                             <div class="small text-body-secondary">
-                                <span class="seismic-swatch" style="background: {{ item.color }};"></span>
+                                <span class="seismic-swatch" data-style="background: {{ item.color }};"></span>
                                 {{ item.label|trans }}
                             </div>
                             <div class="h4 mb-0">
@@ -129,7 +100,7 @@
                                         {% if event.magnitude is null %}
                                             <span class="text-body-secondary">–</span>
                                         {% else %}
-                                            <span class="seismic-mag" style="background: {{ event.color }};"
+                                            <span class="seismic-mag" data-style="background: {{ event.color }};"
                                                   title="{{ event.level_label|trans }}{% if event.mag_type %} ({{ event.mag_type }}){% endif %}">
                                                 {{ event.magnitude|number_format(1) }}
                                             </span>
@@ -163,10 +134,9 @@
 
 {% block javascripts %}
 {% if not error and events_count > 0 %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
 <script id="seismic-data" type="application/json">{{ features_json|raw }}</script>
+<script id="seismic-map-defaults" type="application/json">{{ {center: (area == 'azores' ? [37.7, -25.7] : [39.5, -8.0]), zoom: (area == 'azores' ? 7 : 6)}|json_encode|raw }}</script>
 <script id="seismic-i18n" type="application/json">{{ {
     no_magnitude: 'seismic.no_magnitude'|trans,
     labels: {
@@ -179,58 +149,6 @@
         ('seismic.magnitude.major'): 'seismic.magnitude.major'|trans,
     },
 }|json_encode|raw }}</script>
-<script>
-    (function () {
-        var features = JSON.parse(document.getElementById('seismic-data').textContent);
-        var i18n = JSON.parse(document.getElementById('seismic-i18n').textContent);
-
-        var defaultCenter = {{ area == 'azores' ? '[37.7, -25.7]' : '[39.5, -8.0]' }};
-        var defaultZoom = {{ area == 'azores' ? 7 : 6 }};
-
-        var map = L.map('seismic-map', {
-            center: defaultCenter,
-            zoom: defaultZoom,
-            scrollWheelZoom: true,
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
-
-        function escapeHtml(s) {
-            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-                return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
-            });
-        }
-
-        var bounds = [];
-        features.forEach(function (f) {
-            var marker = L.circleMarker([f.lat, f.lng], {
-                radius: f.radius,
-                weight: 1,
-                color: '#ffffff',
-                fillColor: f.color,
-                fillOpacity: 0.85,
-            });
-            var magText = (f.magnitude == null)
-                ? i18n.no_magnitude
-                : ('M ' + f.magnitude.toFixed(1) + (f.mag_type ? ' (' + escapeHtml(f.mag_type) + ')' : ''));
-            var levelLabel = (i18n.labels && i18n.labels[f.level_label]) ? i18n.labels[f.level_label] : f.level_label;
-            marker.bindPopup(
-                '<strong>' + escapeHtml(levelLabel) + '</strong>'
-                + '<div>' + magText + '</div>'
-                + '<div class="small text-body-secondary">' + escapeHtml(f.region) + '</div>'
-                + '<div class="small text-body-secondary">' + escapeHtml(f.time.replace('T', ' ')) + ' UTC · ' + f.depth + ' km</div>'
-            );
-            marker.addTo(map);
-            bounds.push([f.lat, f.lng]);
-        });
-
-        if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-        }
-    })();
-</script>
+<script src="/js/pages/seismic-index.js"></script>
 {% endif %}
 {% endblock %}

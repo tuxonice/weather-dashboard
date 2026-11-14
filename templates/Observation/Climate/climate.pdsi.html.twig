@@ -4,27 +4,7 @@
 {% block title %}{{ 'climate.page_pdsi_title'|trans({'%name%': location.name}) }}{% endblock %}
 
 {% block stylesheets %}
-<style>
-    .pdsi-cell {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 3.5rem;
-        padding: .15rem .5rem;
-        border-radius: .375rem;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-    }
-    .pdsi-swatch {
-        display: inline-block;
-        width: .75rem;
-        height: .75rem;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,.1);
-        margin-right: .25rem;
-        vertical-align: -1px;
-    }
-</style>
+<link rel="stylesheet" href="/css/pages/climate-pdsi.css">
 {% endblock %}
 
 {% block body %}
@@ -78,10 +58,10 @@
                 {% if item.count > 0 %}
                     <div class="col">
                         <div class="card h-100 border-start border-3"
-                             style="border-left-color: {{ item.color }} !important;">
+                             data-style="border-left-color: {{ item.color }} !important;">
                             <div class="card-body py-2">
                                 <div class="small text-body-secondary">
-                                    <span class="pdsi-swatch" style="background: {{ item.color }};"></span>
+                                    <span class="pdsi-swatch" data-style="background: {{ item.color }};"></span>
                                     {{ item.label }}
                                 </div>
                                 <div class="h5 mb-0">
@@ -109,7 +89,7 @@
                     <svg viewBox="0 0 {{ chart_width }} {{ chart_height }}"
                          role="img"
                          aria-label="{{ 'chart.pdsi_trend'|trans({'%location%': location.name}) }}"
-                         class="w-100" style="height: {{ chart_height }}px;">
+                         class="w-100" data-style="height: {{ chart_height }}px;">
                         {% if zero_y >= padding_y and zero_y <= chart_height - padding_y %}
                             <line x1="{{ padding_x }}" x2="{{ chart_width - padding_x }}"
                                   y1="{{ zero_y|number_format(2, '.', '') }}" y2="{{ zero_y|number_format(2, '.', '') }}"
@@ -139,7 +119,7 @@
                     {{ records|first.date }} → {{ records|last.date }}
                 </span>
             </div>
-            <div class="table-responsive" style="max-height: 28rem;">
+            <div class="table-responsive" data-style="max-height: 28rem;">
                 <table class="table table-sm table-striped mb-0 align-middle">
                     <thead class="sticky-top bg-body-tertiary">
                         <tr>
@@ -162,7 +142,7 @@
                                         <span class="text-body-secondary">—</span>
                                     {% else %}
                                         <span class="pdsi-cell"
-                                              style="background: {{ row.color }}; color: {{ row.text }};"
+                                              data-style="background: {{ row.color }}; color: {{ row.text }};"
                                               title="{{ row.level_label }}">
                                             {{ row.value|number_format(2) }}
                                         </span>
