@@ -112,6 +112,28 @@ final class StationObservationRepository
     }
 
     /**
+     * IDs of stations with at least one non-empty observation anywhere in the
+     * 24h payload.
+     *
+     * @return array<int, true> keyed by station ID
+     */
+    public function stationIdsWithData24h(): array
+    {
+        $ids = [];
+
+        foreach (array_keys($this->timestampsAsc()) as $label) {
+            foreach ($this->rawForTimestamp($label) as $stationId => $raw) {
+                if (!is_array($raw) || StationObservation::fromArray($raw)->isEmpty()) {
+                    continue;
+                }
+                $ids[(int) $stationId] = true;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
      * Total precipitation (mm) per station summed over every timestamp in the
      * 24h payload. Stations that never reported a precipitation value are
      * omitted so callers can tell "no reading" apart from "0 mm".

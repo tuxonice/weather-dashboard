@@ -21,7 +21,7 @@
                     <span class="ms-1">{{ 'station.map_reported_at'|trans({ '%datetime%': updated_at|date('Y-m-d H:i', timezone) }) }}</span>
                 {% endif %}
                 {% if stations_count %}
-                    <span class="ms-1">{{ 'station.map_count'|trans({ '%count%': stations_count, '%active_count%': stations_active_count }) }}</span>
+                    <span class="ms-1">{{ 'station.map_count'|trans({ '%count%': stations_count, '%active_count%': stations_active_count, '%no_data_count%': stations_no_data_24h_count }) }}</span>
                 {% endif %}
             </p>
         </div>
@@ -73,6 +73,7 @@
     temperature:   'station.tile_temperature'|trans,
     apparent_temp: 'station.col_apparent_temp'|trans,
     apparent_assumed: 'station.apparent_wind_assumed'|trans,
+    no_data_24h:   'station.no_data_24h'|trans,
     humidity:      'station.tile_humidity'|trans,
     pressure:      'station.tile_pressure'|trans,
     rain:          'station.col_rain'|trans,

@@ -17,6 +17,10 @@
         background: #e9ecef;
         color: #6c757d;
     }
+    .station-marker--nodata {
+        background: #495057;
+        color: #fff;
+    }
     .leaflet-popup-content dl { margin: 0; }
     .leaflet-popup-content dt { font-weight: 600; }
     .leaflet-popup-content dd { margin: 0 0 .25rem 0; }

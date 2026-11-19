@@ -95,7 +95,7 @@
                     var speed = s.wind_speed_kmh;
                     var bearing = s.wind_dir_bearing;
                     if (speed === null || speed === undefined) {
-                        return '<div class="station-marker station-marker--missing" data-style="width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+                        return '<div class="station-marker station-marker--missing' + (s.no_data_24h ? ' station-marker--nodata' : '') + '" data-style="width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
                              + '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg></div>';
                     }
                     var arrowSvg = (bearing !== null && bearing !== undefined)
@@ -182,8 +182,13 @@
         }
 
         function buildPopup(s) {
-            return '<strong>' + escapeHtml(s.name || i18n.station) + '</strong>'
-                + '<div class="small text-body-secondary mb-2">#' + escapeHtml(s.id) + '</div>'
+            var header = '<strong>' + escapeHtml(s.name || i18n.station) + '</strong>'
+                + '<div class="small text-body-secondary mb-2">#' + escapeHtml(s.id) + '</div>';
+            if (s.no_data_24h) {
+                return header
+                    + '<div class="small fw-semibold"><i class="bi bi-exclamation-circle"></i> ' + escapeHtml(i18n.no_data_24h) + '</div>';
+            }
+            return header
                 + '<dl class="small">'
                 +   '<dt>' + escapeHtml(i18n.temperature) + '</dt><dd>' + fmt(s.temperature_c, '°C', 1) + '</dd>'
                 +   '<dt>' + escapeHtml(i18n.apparent_temp) + '</dt><dd>'
@@ -222,8 +227,9 @@
                 var value = s[layer.field];
                 var numVal = (!isCategorical && value !== null && value !== undefined) ? Number(value) : null;
                 var c = isCategorical ? layer.colorFn(value, s) : interpolateStops(numVal, layer.stops);
-                var bg = c ? rgb(c) : '#e9ecef';
-                var fg = c ? contrastColor(c) : '#6c757d';
+                var noData24h = !!s.no_data_24h;
+                var bg = c ? rgb(c) : (noData24h ? '#495057' : '#e9ecef');
+                var fg = c ? contrastColor(c) : (noData24h ? '#ffffff' : '#6c757d');
                 var iconHtml;
                 if (layer.iconHtmlFn) {
                     iconHtml = layer.iconHtmlFn(s, bg, fg);
@@ -232,7 +238,7 @@
                     var rawLabel = layer.labelFn(labelInput);
                     var label = rawLabel === null ? '—' : rawLabel;
                     var isMissing = isCategorical ? !c : numVal === null;
-                    var cls = 'station-marker' + (isMissing ? ' station-marker--missing' : '');
+                    var cls = 'station-marker' + (isMissing ? ' station-marker--missing' : '') + (isMissing && noData24h ? ' station-marker--nodata' : '');
                     iconHtml = '<div class="' + cls + '" data-style="background:' + bg + ';color:' + fg + ';padding:4px 6px;">' + escapeHtml(label) + '</div>';
                 }
 

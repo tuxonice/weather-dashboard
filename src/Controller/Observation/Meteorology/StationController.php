@@ -314,11 +314,12 @@ final class StationController
         $features = [];
         $error = null;
         $updatedAt = null;
-        $stats = ['temp_min' => null, 'temp_max' => null, 'count' => 0, 'active_count' => 0];
+        $stats = ['temp_min' => null, 'temp_max' => null, 'count' => 0, 'active_count' => 0, 'no_data_24h_count' => 0];
 
         try {
             $stations = $this->stations->all();
             $latest = $this->observations->latestAll();
+            $withData24h = $this->observations->stationIdsWithData24h();
             $rain24h = $this->observations->precipitationTotals24h();
             $radiation24h = $this->observations->radiationTotalsKwhM2();
             $updatedAt = $latest['at'];
@@ -336,12 +337,16 @@ final class StationController
                 if ($obs !== null) {
                     $stats['active_count']++;
                 }
+                if (!isset($withData24h[$station->id])) {
+                    $stats['no_data_24h_count']++;
+                }
 
                 $features[] = [
                     'id'               => $station->id,
                     'name'             => $station->name,
                     'lat'              => $station->latitude,
                     'lng'              => $station->longitude,
+                    'no_data_24h'      => !isset($withData24h[$station->id]),
                     'temperature_c'    => $temp,
                     'apparent_temperature_c' => ApparentTemperature::estimateCelsius(
                         $temp,
@@ -376,6 +381,7 @@ final class StationController
             'stations_json' => json_encode($features, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
             'stations_count' => $stats['count'],
             'stations_active_count' => $stats['active_count'],
+            'stations_no_data_24h_count' => $stats['no_data_24h_count'],
             'temp_min' => $stats['temp_min'],
             'temp_max' => $stats['temp_max'],
             'updated_at' => $updatedAt?->setTimezone($tz),
